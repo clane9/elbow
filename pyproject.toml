@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "loaders"
+name = "elbow"
 description = "Extract data from a bunch of files and load into a table"
 authors = [
     {name = "Connor Lane", email = "connor.lane858@gmail.com"},
@@ -45,10 +45,10 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/clane9/loaders"
+"Homepage" = "https://github.com/clane9/elbow"
 
 [tool.setuptools_scm]
-write_to = "loaders/_version.py"
+write_to = "elbow/_version.py"
 
 [tool.black]
 line-length = 88

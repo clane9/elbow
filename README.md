@@ -1,13 +1,13 @@
-# Loaders
+# Elbow
 
-Loaders is a library for extracting data from a bunch of files and loading into table (and that's it).
+Elbow is a library for extracting data from a bunch of files and loading into table (and that's it).
 
 ## Examples
 
 ```python
 import json
 
-from loaders import load_table, load_parquet
+from elbow import load_table, load_parquet
 
 
 # Extract records from JSON-lines
@@ -38,5 +38,5 @@ dset = load_parquet(
 A pre-release version can be installed with
 
 ```
-pip install git+https://github.com/clane9/loaders
+pip install git+https://github.com/clane9/elbow
 ```
