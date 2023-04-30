@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loaders"
+description = "Extract data from a bunch of files and load into a table"
+authors = [
+    {name = "Connor Lane", email = "connor.lane858@gmail.com"},
+]
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyarrow",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+dev = [
+    "black==22.10.0",
+    "flake8==5.0.4",
+    "isort==5.10.1",
+    "mypy==0.982",
+    "pre-commit",
+    "pylint>=2.5.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/clane9/loaders"
+
+[tool.setuptools_scm]
+write_to = "loaders/_version.py"
+
+[tool.black]
+line-length = 88
+target_version = ['py37']
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+
+[tool.mypy]
+no_strict_optional = true
+ignore_missing_imports = true
