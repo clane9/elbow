@@ -151,22 +151,29 @@ class RecordBatch:
         schema: Optional[Union[Dict[str, DataType], pa.Schema]] = None,
         strict: bool = False,
     ):
+        self.schema = schema
         self.strict = strict
 
+        self.reset()
+        if batch is not None:
+            self.extend(batch)
+
+    def reset(self):
+        """
+        Reset the batch.
+        """
         self._batch: List[Record] = []
         self._columns: List[str] = []
         self._fields: Dict[str, pa.DataType] = {}
         self._null_fields: Set[str] = set()
 
-        if schema:
+        if self.schema is not None:
+            schema = self.schema
             if not isinstance(schema, pa.Schema):
                 schema = pa.schema(
                     {name: get_dtype(typ) for name, typ in schema.items()}
                 )
             self._init_schema(schema)
-
-        if batch is not None:
-            self.extend(batch)
 
     def append(self, record: RecordLike):
         """
@@ -251,6 +258,12 @@ class RecordBatch:
         Convert the batch to a pandas DataFrame.
         """
         return self.to_arrow().to_pandas()
+
+    def clear(self):
+        """
+        Empty the batch.
+        """
+        self._batch.clear()
 
     def __len__(self) -> int:
         return len(self._batch)
