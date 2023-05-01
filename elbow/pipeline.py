@@ -42,9 +42,6 @@ class Pipeline:
         # TODO:
         #   - setup/teardown?
         #   - what if this is called multiple times?
-        # stream: Iterable[Optional[RecordLike]]
-        # rec: RecordLike
-
         counts = ProcessCounts()
 
         for path in self._source:
@@ -77,7 +74,6 @@ class Pipeline:
 def _extract_stream(
     path: StrOrPath, extract: Extractor
 ) -> Iterable[Optional[RecordLike]]:
-
     stream = extract(path)
     # TODO: is_recordlike isn't interpreted by the type-checker as narrowing the type to
     # RecordLike. Is there a way to fix this?
