@@ -37,12 +37,13 @@ test = [
     "pytest-cov",
 ]
 dev = [
-    "black==22.10.0",
+    "black==23.3.0",
     "flake8==5.0.4",
-    "isort==5.10.1",
-    "mypy==0.982",
+    "isort==5.11.5",
+    "mypy==1.2.0",
     "pre-commit",
     "pylint>=2.5.0",
+    "setuptools-scm",
 ]
 
 [project.urls]
