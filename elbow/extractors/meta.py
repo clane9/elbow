@@ -20,7 +20,7 @@ class FileMetadata:
     # TODO: Will this type be inferred correctly?
     link_target: Optional[str]
     # TODO: Should this be a time-aware type?
-    mod_time: float
+    mod_time: Optional[float]
 
 
 def file_meta(path: StrOrPath) -> FileMetadata:
@@ -29,7 +29,7 @@ def file_meta(path: StrOrPath) -> FileMetadata:
     """
     path = Path(path)
     target = str(path.resolve()) if path.is_symlink() else None
-    mtime = path.stat().st_mtime
+    mtime = path.stat().st_mtime if path.exists() else None
     return FileMetadata(
         file_path=str(path.absolute()), link_target=target, mod_time=mtime
     )
