@@ -1,6 +1,6 @@
 # Elbow
 
-Elbow is a library for extracting data from a bunch of files and loading into table (and that's it).
+Elbow is a library for extracting data from a bunch of files and loading into a table (and that's it).
 
 ## Examples
 
@@ -9,14 +9,12 @@ import json
 
 from elbow import load_table, load_parquet
 
-
 # Extract records from JSON-lines
 def extract(path):
     with open(path) as f:
-        for line in path:
+        for line in f:
             record = json.loads(line)
             yield record
-
 
 # Load as a pandas dataframe
 df = load_table(
@@ -40,3 +38,9 @@ A pre-release version can be installed with
 ```
 pip install git+https://github.com/clane9/elbow
 ```
+
+## Other (better) projects
+
+- [AirByte](https://github.com/airbytehq/airbyte)
+- [Meltano](https://github.com/meltano/meltano)
+- [Singer](https://github.com/singer-io/getting-started)
