@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pyarrow as pa
+from typing_extensions import get_args, get_origin
 
 from . import PaJSONType, PaNDArrayType, PaPickleType
 
@@ -64,6 +65,9 @@ def get_dtype(alias: DataType) -> pa.DataType:
 
 
 def _get_primitive_dtype(dtype: DataType) -> pa.DataType:
+    # Handle aliases of the form Optional[str]
+    dtype = _unbox_primitive_optional(dtype)
+
     try:
         return pa.lib.ensure_type(dtype)
     except Exception:
@@ -75,6 +79,26 @@ def _get_primitive_dtype(dtype: DataType) -> pa.DataType:
         pass
 
     raise ValueError(f"Unsupported dtype '{dtype}'")
+
+
+def _unbox_primitive_optional(dtype: DataType) -> DataType:
+    """
+    Unbox type aliases of the form `Optional[str]`.
+    """
+    if _is_primitive_optional(dtype):
+        dtype = get_args(dtype)[0]
+    return dtype
+
+
+def _is_primitive_optional(dtype: DataType) -> bool:
+    """
+    Check if dtype is an optional of a primitive type like `Optional[str]`.
+    """
+    return (
+        get_origin(dtype) is Union
+        and len(get_args(dtype)) == 2
+        and isinstance(None, get_args(dtype)[1])
+    )
 
 
 def _struct_from_string(alias: str) -> Optional[pa.DataType]:

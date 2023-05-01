@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import pyarrow as pa
 import pytest
@@ -39,10 +41,19 @@ from elbow.dtypes import DataType, PaJSONType, PaNDArrayType, PaPickleType, get_
         ("json", PaJSONType()),
         ("pickle", PaPickleType()),
         ("ndarray<float32>", PaNDArrayType(pa.float32())),
+        (Optional[str], pa.string()),
     ],
 )
 def test_get_dtype(test_input: DataType, expected: pa.DataType):
     assert get_dtype(test_input) == expected
+
+
+@pytest.mark.parametrize(
+    "unsupported_dtype", [object, "object", "map<int32, str>", "list", "struct"]
+)
+def test_unsupported_get_dtype(unsupported_dtype: DataType):
+    with pytest.raises(ValueError):
+        get_dtype(unsupported_dtype)
 
 
 if __name__ == "__main__":
