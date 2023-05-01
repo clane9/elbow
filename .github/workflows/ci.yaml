@@ -21,12 +21,12 @@ jobs:
           pip install .[dev,test]
       - name: Check quality
         run: |
-          black --check loaders tests
-          isort --check-only loaders tests
-          flake8 loaders tests
-          pylint --fail-under 9.0 loaders
-          mypy loaders 
+          black --check elbow tests
+          isort --check-only elbow tests
+          flake8 elbow tests
+          pylint --fail-under 9.0 elbow
+          mypy elbow 
       - name: Run tests
-        run: pytest --cov=loaders tests
+        run: pytest --cov=elbow tests
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
