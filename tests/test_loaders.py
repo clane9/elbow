@@ -1,12 +1,12 @@
 import json
 import string
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict
 
 import numpy as np
 import pytest
 
-from elbow import RecordLike, as_record, load_parquet, load_table
+from elbow import as_record, load_parquet, load_table
 from elbow.extractors import file_meta
 from elbow.typing import StrOrPath
 
@@ -55,7 +55,7 @@ def _random_string(rng: np.random.Generator, length: int):
     return "".join(rng.choice(list(string.ascii_letters), length))
 
 
-def extract_jsonl(path: StrOrPath) -> Iterable[RecordLike]:
+def extract_jsonl(path: StrOrPath):
     metadata = as_record(file_meta(path))
 
     with open(path) as f:
