@@ -176,12 +176,12 @@ def test_pd_pa_df_conversion(ext_data: ExtData):
     assert df.equals(df4)
 
     # check conversion of a table column to pandas series
-    # TODO: the table column (type ChunkedArray) does not convert to pandas correctly.
-    # The __from_arrow__ method never gets called. Why? Note that converting the first
-    # chunk works fine.
     col = tab[ext_data.name]
-    ser2 = col.to_pandas()
-    assert not ser.equals(ser2)
+    # NOTE: the table column (type ChunkedArray) does not convert to pandas correctly in
+    # pyarrow<12.0. The __from_arrow__ method never gets called. But note that
+    # converting the first chunk works fine.
+    # ser2 = col.to_pandas()
+    # assert ser.equals(ser2)
     ser3 = col.chunk(0).to_pandas()
     assert ser.equals(ser3)
 
