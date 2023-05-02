@@ -7,6 +7,8 @@ from elbow.extractors import Extractor
 from elbow.record import RecordLike, is_recordlike
 from elbow.typing import StrOrPath
 
+__all__ = ["ProcessCounts", "Pipeline"]
+
 
 @dataclass
 class ProcessCounts:

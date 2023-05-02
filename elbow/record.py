@@ -158,7 +158,7 @@ class RecordBatch:
         if batch is not None:
             self.extend(batch)
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the batch.
         """
