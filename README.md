@@ -44,3 +44,6 @@ pip install git+https://github.com/clane9/elbow
 - [AirByte](https://github.com/airbytehq/airbyte)
 - [Meltano](https://github.com/meltano/meltano)
 - [Singer](https://github.com/singer-io/getting-started)
+- [Mage](https://github.com/mage-ai/mage-ai)
+- [Orchest](https://github.com/orchest/orchest)
+- [Streamz](https://github.com/python-streamz/streamz)
