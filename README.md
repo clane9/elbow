@@ -36,7 +36,7 @@ dset = load_parquet(
 A pre-release version can be installed with
 
 ```
-pip install git+https://github.com/clane9/elbow
+pip install elbow
 ```
 
 ## Other (better) projects
