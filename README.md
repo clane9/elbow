@@ -22,13 +22,13 @@ def extract(path):
 
 # Load as a pandas dataframe
 df = load_table(
-    pattern="**/*.json",
+    source="**/*.json",
     extract=extract,
 )
 
 # Load as a parquet dataset (in parallel)
 dset = load_parquet(
-    pattern="**/*.json",
+    source="**/*.json",
     extract=extract,
     where="dset.parquet",
     workers=8,
