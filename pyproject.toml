@@ -35,6 +35,7 @@ dynamic = ["version"]
 test = [
     "pytest",
     "pytest-cov",
+    "pytest-benchmark",
 ]
 dev = [
     "black==23.3.0",
