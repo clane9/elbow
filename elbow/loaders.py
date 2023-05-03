@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import partial
 from glob import iglob
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional, Union
 
 import pandas as pd
 import pyarrow.parquet as pq
@@ -21,25 +21,25 @@ __all__ = ["load_table", "load_parquet"]
 
 
 def load_table(
-    pattern: str,
+    source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
-    recursive: bool = True,
     max_failures: Optional[int] = 0,
 ) -> pd.DataFrame:
     """
     Extract records from a stream of files and load into a pandas DataFrame
 
     Args:
-        pattern: shell-style file pattern as in `glob.glob()`
+        source: shell-style file pattern as in `glob.glob()` or iterable of paths.
+            Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
-        recursive: if True, patterns containing '**' will match any files and zero or
-            more directories
         max_failures: number of failures to tolerate
 
     Returns:
         A DataFrame containing the concatenated records (in arbitrary order)
     """
-    source = iglob(pattern, recursive=recursive)
+    if isinstance(source, str):
+        source = iglob(source, recursive=True)
+
     batch = RecordBatch()
     pipe = Pipeline(
         source=source, extract=extract, sink=batch.append, max_failures=max_failures
@@ -51,10 +51,9 @@ def load_table(
 
 
 def load_parquet(
-    pattern: str,
+    source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     where: StrOrPath,
-    recursive: bool = True,
     incremental: bool = False,
     workers: Optional[int] = None,
     max_failures: Optional[int] = 0,
@@ -63,11 +62,10 @@ def load_parquet(
     Extract records from a stream of files and load as a Parquet dataset
 
     Args:
-        pattern: shell-style file pattern as in `glob.glob()`
+        source: shell-style file pattern as in `glob.glob()` or iterable of paths.
+            Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
         where: path to output parquet dataset directory
-        recursive: if True, patterns containing '**' will match any files and zero or
-            more directories
         incremental: update dataset incrementally with only new or changed files.
         workers: number of parallel processes. If `None` or 1, run in the main
             process. Setting to -1 runs in `os.cpu_count()` processes.
@@ -86,12 +84,11 @@ def load_parquet(
 
     _worker = partial(
         _load_parquet_worker,
-        pattern=pattern,
+        source=source,
         extract=extract,
         where=where,
         incremental=incremental,
         workers=workers,
-        recursive=recursive,
         max_failures=max_failures,
     )
 
@@ -109,17 +106,17 @@ def load_parquet(
 def _load_parquet_worker(
     worker_id: int,
     *,
-    pattern: str,
+    source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     where: StrOrPath,
     incremental: bool,
     workers: int,
-    recursive: bool,
     max_failures: Optional[int],
 ):
     start = datetime.now()
     where = Path(where)
-    source = iglob(pattern, recursive=recursive)
+    if isinstance(source, str):
+        source = iglob(source, recursive=True)
 
     if incremental and where.exists():
         # NOTE: Race to read index while other workers try to write.
@@ -135,6 +132,8 @@ def _load_parquet_worker(
 
     # Include start time in file name in case of multiple incremental loads.
     where = where / f"part-{start.strftime('%Y%m%d%H%M%S')}-{worker_id:04d}"
+    if where.exists():
+        raise FileExistsError(f"Partition {where} already exists")
     where.parent.mkdir(parents=True, exist_ok=True)
 
     # Using atomicopen to avoid partial output files

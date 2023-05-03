@@ -1,5 +1,6 @@
 import json
 import string
+import time
 from pathlib import Path
 from typing import Any, Dict
 
@@ -67,7 +68,7 @@ def extract_jsonl(path: StrOrPath):
 
 
 def test_load_table(jsonl_dataset: str):
-    df = load_table(pattern=jsonl_dataset, extract=extract_jsonl)
+    df = load_table(source=jsonl_dataset, extract=extract_jsonl)
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     expected_columns = ["file_path", "link_target", "mod_time", "a", "b", "c", "d"]
@@ -78,7 +79,7 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset.parquet"
 
     dset = load_parquet(
-        pattern=jsonl_dataset,
+        source=jsonl_dataset,
         extract=extract_jsonl,
         where=pq_path,
     )
@@ -89,7 +90,7 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
 
     with pytest.raises(FileExistsError):
         load_parquet(
-            pattern=jsonl_dataset,
+            source=jsonl_dataset,
             extract=extract_jsonl,
             where=pq_path,
         )
@@ -99,8 +100,11 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     # New batch
     _random_jsonl_batch(NUM_BATCHES, mod_tmp_path, BATCH_SIZE)
 
+    # NOTE: have to wait at least a second to avoid clobbering the previous partition.
+    time.sleep(1.0)
+
     dset2 = load_parquet(
-        pattern=jsonl_dataset,
+        source=jsonl_dataset,
         extract=extract_jsonl,
         where=pq_path,
         incremental=True,
@@ -115,7 +119,7 @@ def test_load_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset_parallel.parquet"
 
     dset = load_parquet(
-        pattern=jsonl_dataset,
+        source=jsonl_dataset,
         extract=extract_jsonl,
         where=pq_path,
         workers=2,
