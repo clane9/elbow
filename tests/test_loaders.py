@@ -1,18 +1,17 @@
 import json
-import string
 import time
 from pathlib import Path
-from typing import Any, Dict
 
-import numpy as np
 import pytest
 
 from elbow import as_record, load_parquet, load_table
 from elbow.extractors import file_meta
 from elbow.typing import StrOrPath
+from tests.utils_for_tests import random_jsonl_batch
 
 NUM_BATCHES = 64
 BATCH_SIZE = 256
+SEED = 2022
 
 # TODO: may want to benchmark these with pytest-benchmark
 
@@ -25,35 +24,10 @@ def mod_tmp_path(tmp_path_factory) -> Path:
 @pytest.fixture(scope="module")
 def jsonl_dataset(mod_tmp_path: Path) -> str:
     for ii in range(NUM_BATCHES):
-        _random_jsonl_batch(ii, mod_tmp_path, BATCH_SIZE)
+        random_jsonl_batch(mod_tmp_path, BATCH_SIZE, seed=(SEED + ii))
 
     pattern = str(mod_tmp_path / "*.json")
     return pattern
-
-
-def _random_jsonl_batch(idx: int, tmp_path: Path, batch_size: int):
-    rng = np.random.default_rng(2022 + idx)
-    path = tmp_path / f"{_random_string(rng, 8)}.json"
-
-    with path.open("w") as f:
-        for _ in range(batch_size):
-            rec = _random_record(rng)
-            print(json.dumps(rec), file=f)
-    return path
-
-
-def _random_record(rng: np.random.Generator) -> Dict[str, Any]:
-    rec = {
-        "a": int(rng.integers(0, 10)),
-        "b": float(rng.random()),
-        "c": _random_string(rng, 32),
-        "d": rng.normal(size=rng.integers(0, 100)).tolist(),
-    }
-    return rec
-
-
-def _random_string(rng: np.random.Generator, length: int):
-    return "".join(rng.choice(list(string.ascii_letters), length))
 
 
 def extract_jsonl(path: StrOrPath):
@@ -96,9 +70,9 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
         )
 
     # Re-write batch 0
-    _random_jsonl_batch(0, mod_tmp_path, BATCH_SIZE)
+    random_jsonl_batch(mod_tmp_path, BATCH_SIZE, seed=SEED)
     # New batch
-    _random_jsonl_batch(NUM_BATCHES, mod_tmp_path, BATCH_SIZE)
+    random_jsonl_batch(mod_tmp_path, BATCH_SIZE, seed=(SEED + NUM_BATCHES))
 
     # NOTE: have to wait at least a second to avoid clobbering the previous partition.
     time.sleep(1.0)
