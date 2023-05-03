@@ -5,6 +5,10 @@ from typing import Any, Dict
 
 import numpy as np
 
+from elbow import as_record
+from elbow.extractors import file_meta
+from elbow.typing import StrOrPath
+
 
 def random_jsonl_batch(tmp_path: Path, batch_size: int, seed: int = 42):
     rng = np.random.default_rng(seed)
@@ -29,3 +33,14 @@ def random_record(rng: np.random.Generator) -> Dict[str, Any]:
 
 def random_string(rng: np.random.Generator, length: int):
     return "".join(rng.choice(list(string.ascii_letters), length))
+
+
+def extract_jsonl(path: StrOrPath):
+    metadata = as_record(file_meta(path))
+
+    with open(path) as f:
+        for line in f:
+            record = json.loads(line)
+            # with metadata
+            record = metadata + record
+            yield record

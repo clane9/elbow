@@ -19,6 +19,11 @@ build
 .mypy_cache
 htmlcov
 
+# Benchmark data/results
+benchmarks/*/data
+*.prof
+
+
 # VScode IDE
 .vscode/
 .env
