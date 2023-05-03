@@ -1,4 +1,8 @@
 # Elbow
+[![Build](https://github.com/clane9/elbow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/clane9/elbow/actions/workflows/ci.yaml?query=branch%3Amain)
+[![codecov](https://codecov.io/gh/clane9/elbow/branch/main/graph/badge.svg?token=22HWWFWPW5)](https://codecov.io/gh/clane9/elbow)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Elbow is a library for extracting data from a bunch of files and loading into a table (and that's it).
 
