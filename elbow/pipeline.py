@@ -1,5 +1,4 @@
 import logging
-import traceback
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Callable, Iterable, Optional, no_type_check
@@ -69,11 +68,8 @@ class Pipeline:
                     counts.success += 1
 
                 except Exception as exc:
-                    logging.warning(
-                        f"Failed to process: {path}\n\n" + traceback.format_exc() + "\n"
-                    )
+                    logging.warning("Failed to process %s", path, exc_info=exc)
                     counts.error += 1
-
                     if (
                         self.max_failures is not None
                         and counts.error > self.max_failures >= 0
