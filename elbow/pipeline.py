@@ -1,7 +1,10 @@
 import logging
 import traceback
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Callable, Iterable, Optional, no_type_check
+
+import tqdm
 
 from elbow.extractors import Extractor
 from elbow.record import RecordLike, is_recordlike
@@ -30,8 +33,10 @@ class Pipeline:
         extract: Extractor,
         sink: Callable[[RecordLike], None],
         max_failures: Optional[int] = 0,
+        progress: bool = True,
     ):
         self.max_failures = max_failures
+        self.progress = progress
 
         self._source = source
         self._extract = extract
@@ -46,28 +51,44 @@ class Pipeline:
         #   - what if this is called multiple times?
         counts = ProcessCounts()
 
-        for path in self._source:
-            counts.total += 1
-            try:
-                stream = _extract_stream(path, self._extract)
-                for rec in stream:
-                    if rec is None:
-                        continue
-                    self._sink(rec)
-                    counts.record += 1
-                counts.success += 1
+        if self.progress:
+            iterator = tqdm.tqdm(self._source)
+        else:
+            iterator = _null_progress(self._source)
 
-            except Exception as exc:
-                logging.warning(
-                    f"Failed to process: {path}\n\n" + traceback.format_exc() + "\n"
-                )
-                counts.error += 1
+        with iterator as it:
+            for path in it:
+                counts.total += 1
+                try:
+                    stream = _extract_stream(path, self._extract)
+                    for rec in stream:
+                        if rec is None:
+                            continue
+                        self._sink(rec)
+                        counts.record += 1
+                    counts.success += 1
 
-                if (
-                    self.max_failures is not None
-                    and counts.error > self.max_failures >= 0
-                ):
-                    raise RuntimeError("Too many errors in pipeline") from exc
+                except Exception as exc:
+                    logging.warning(
+                        f"Failed to process: {path}\n\n" + traceback.format_exc() + "\n"
+                    )
+                    counts.error += 1
+
+                    if (
+                        self.max_failures is not None
+                        and counts.error > self.max_failures >= 0
+                    ):
+                        raise RuntimeError("Too many errors in pipeline") from exc
+
+                if isinstance(it, tqdm.tqdm):
+                    it.set_postfix(
+                        ordered_dict={
+                            "tot": counts.total,
+                            "good": counts.success,
+                            "rec": counts.record,
+                            "err": counts.error,
+                        }
+                    )
 
         return counts
 
@@ -82,3 +103,8 @@ def _extract_stream(
     if stream is None or is_recordlike(stream):
         stream = [stream]
     return stream
+
+
+@contextmanager
+def _null_progress(source: Iterable[StrOrPath]):
+    yield source
