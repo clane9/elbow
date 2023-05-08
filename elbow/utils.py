@@ -1,12 +1,73 @@
 import fcntl
+import logging
 import os
 import re
+import sys
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 StrOrPath = Union[str, Path]
+
+
+class RepetitiveFilter(logging.Filter):
+    """
+    Suppress similar log messages after a number of repeats.
+    """
+
+    def __init__(self, max_repeats: int = 5):
+        self.max_repeats = max_repeats
+
+        self._counts: Dict[Tuple[str, int], int] = {}
+
+    def filter(self, record: logging.LogRecord):
+        key = record.pathname, record.lineno
+        count = self._counts.get(key, 0)
+        if count == self.max_repeats:
+            record.msg += " [future messages suppressed]"
+        self._counts[key] = count + 1
+        return count <= self.max_repeats
+
+
+def setup_logging(
+    level: Union[int, str] = "INFO",
+    max_repeats: Optional[int] = 5,
+    log_path: Optional[StrOrPath] = None,
+):
+    """
+    Setup root logger.
+    """
+    fmt = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)4d]: " "%(message)s"
+    formatter = logging.Formatter(fmt, datefmt="%y-%m-%d %H:%M:%S")
+
+    logger = logging.getLogger()
+    logger.setLevel(level)
+
+    # clean up any pre-existing filters and handlers
+    for f in logger.filters:
+        logger.removeFilter(f)
+    for h in logger.handlers:
+        logger.removeHandler(h)
+
+    if max_repeats:
+        logger.addFilter(RepetitiveFilter(max_repeats=max_repeats))
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(level)
+    logger.addHandler(stream_handler)
+
+    if log_path is not None:
+        file_handler = logging.FileHandler(log_path, mode="a")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(level)
+        logger.addHandler(file_handler)
+
+    # Redefining the root logger is not strictly best practice.
+    # https://stackoverflow.com/a/7430495
+    # But I want the convenience to just call e.g. `logging.info()`.
+    logging.root = logger  # type: ignore
 
 
 @contextmanager

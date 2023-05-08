@@ -11,6 +11,12 @@ from elbow import utils as ut
 DATA_DIR = Path(__file__).parent / "data"
 
 
+def test_repetitive_filter():
+    # default logger already contains the repetitive filter
+    for ii in range(10):
+        logging.warning("Message: %d", ii)
+
+
 def test_lockopen(tmp_path: Path):
     fname = tmp_path / "file.txt"
 
