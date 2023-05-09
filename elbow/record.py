@@ -1,5 +1,4 @@
-from collections.abc import Mapping
-from dataclasses import fields, is_dataclass
+from dataclasses import fields
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
 import numpy as np
@@ -300,9 +299,9 @@ def as_record(obj: RecordLike) -> Record:
     """
     if isinstance(obj, Record):
         rec = obj
-    elif is_dataclass(obj):
+    elif _is_dataclass_instance(obj):
         rec = Record.from_dataclass(obj)
-    elif isinstance(obj, Mapping):
+    elif isinstance(obj, dict):
         rec = Record(data=obj)
     else:
         raise TypeError("Object cannot be cast to a record")
@@ -313,7 +312,7 @@ def is_recordlike(obj: Any) -> bool:
     """
     Check if an object can be cast to a Record.
     """
-    return isinstance(obj, (Mapping, Record)) or is_dataclass(obj)
+    return isinstance(obj, dict) or _is_dataclass_instance(obj)
 
 
 def arrow_record(data: RecordLike, schema: pa.Schema) -> pa.RecordBatch:
@@ -360,3 +359,8 @@ def arrow_array(
     if isinstance(type, PaExtensionType):
         data = [type.pack(v) for v in data]
     return pa.array(data, type=type)
+
+
+def _is_dataclass_instance(obj: Any):
+    """Returns True if obj is an instance of a dataclass."""
+    return hasattr(type(obj), "__dataclass_fields__")
