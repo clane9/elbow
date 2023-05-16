@@ -49,7 +49,7 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/clane9/elbow"
+"Homepage" = "https://github.com/cmi-dair/elbow"
 
 [tool.setuptools_scm]
 write_to = "elbow/_version.py"
