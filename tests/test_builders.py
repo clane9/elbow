@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from elbow import load_parquet, load_table
+from elbow import build_parquet, build_table
 from tests.utils_for_tests import extract_jsonl, random_jsonl_batch
 
 NUM_BATCHES = 64
@@ -26,25 +26,25 @@ def jsonl_dataset(mod_tmp_path: Path) -> str:
     return pattern
 
 
-def test_load_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
-    df = benchmark(load_table, source=jsonl_dataset, extract=extract_jsonl)
+def test_build_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
+    df = benchmark(build_table, source=jsonl_dataset, extract=extract_jsonl)
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     expected_columns = ["file_path", "link_target", "mod_time", "a", "b", "c", "d"]
     assert df.columns.tolist() == expected_columns
 
 
-def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
+def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset.parquet"
 
-    dset = load_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+    dset = build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
     assert len(dset.files) == 1
 
     df = dset.read().to_pandas()
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     with pytest.raises(FileExistsError):
-        load_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+        build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
 
     # Re-write batch 0
     random_jsonl_batch(mod_tmp_path, BATCH_SIZE, seed=SEED)
@@ -54,7 +54,7 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     # NOTE: have to wait at least a second to avoid clobbering the previous partition.
     time.sleep(1.0)
 
-    dset2 = load_parquet(
+    dset2 = build_parquet(
         source=jsonl_dataset, extract=extract_jsonl, where=pq_path, incremental=True
     )
     assert len(dset2.files) == 2
@@ -63,10 +63,10 @@ def test_load_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     assert df2.shape == ((NUM_BATCHES + 2) * BATCH_SIZE, 7)
 
 
-def test_load_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
+def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset_parallel.parquet"
 
-    dset = load_parquet(
+    dset = build_parquet(
         source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2
     )
     assert len(dset.files) == 2

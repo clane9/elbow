@@ -11,7 +11,7 @@ Elbow is a library for extracting data from a bunch of files and loading into a 
 ```python
 import json
 
-from elbow import load_table, load_parquet
+from elbow import build_table, build_parquet
 
 # Extract records from JSON-lines
 def extract(path):
@@ -21,16 +21,16 @@ def extract(path):
             yield record
 
 # Load as a pandas dataframe
-df = load_table(
+df = build_table(
     source="**/*.json",
     extract=extract,
 )
 
 # Load as a parquet dataset (in parallel)
-dset = load_parquet(
+dset = build_parquet(
     source="**/*.json",
     extract=extract,
-    where="dset.parquet",
+    where="dset/",
     workers=8,
 )
 ```
