@@ -15,7 +15,8 @@ Fields = Dict[str, DataType]
 
 def get_dtype(alias: DataType) -> pa.DataType:
     """
-    Attempt to infer the PyArrow dtype from string type alias or numpy dtype.
+    Attempt to infer the PyArrow dtype from string type alias or numpy dtype or python
+    type hint.
 
     The list of available pyarrow type aliases is available `here`_.
 
@@ -31,23 +32,95 @@ def get_dtype(alias: DataType) -> pa.DataType:
     - ``"pickle"`` -> ``PaPickleType()``
     - ``"ndarray<(item:)? TYPE>"`` -> ``PaNDArrayType(TYPE)``
 
+    The following python type hints are supported:
+
+    - ``Optional[TYPE] -> ``TYPE``
+    - ``List[TYPE] -> ``pa.list_(TYPE)``
+    - ``Dict[str, Any] -> ``PaJSONType()``
+
     .. _here: https://github.com/apache/arrow/blob/go/v10.0.0/python/pyarrow/types.pxi#L3159
 
     NOTE: nested types containing extension types are not supported
     """
-    if isinstance(alias, dict):
-        return _struct_from_fields(alias)
+    if isinstance(alias, str):
+        alias = alias.strip()
 
-    elif not isinstance(alias, str):
-        return _get_primitive_dtype(alias)
+    dtype = _get_primitive_dtype(alias)
+    if dtype is not None:
+        return dtype
 
-    alias = alias.strip()
+    dtype = _get_generic_dtype(alias)
+    if dtype is not None:
+        return dtype
+
+    dtype = _get_extension_dtype(alias)
+    if dtype is not None:
+        return dtype
+
+    dtype = _get_nested_dtype(alias)
+    if dtype is not None:
+        return dtype
+
+    raise ValueError(f"Unsupported dtype alias '{alias}'")
+
+
+def _get_primitive_dtype(alias: DataType) -> Optional[pa.DataType]:
+    try:
+        return pa.lib.ensure_type(alias)
+    except Exception:
+        pass
+
+    try:
+        return pa.from_numpy_dtype(alias)
+    except Exception:
+        pass
+    return None
+
+
+def _get_generic_dtype(alias: Any) -> Optional[pa.DataType]:
+    origin = get_origin(alias)
+    if origin is None:
+        return None
+    args = get_args(alias)
+
+    # optional, e.g. Optional[str]
+    # unbox and recurse
+    if origin is Union and len(args) == 2 and isinstance(None, args[1]):
+        return get_dtype(args[0])
+
+    # list type, e.g. List[str]
+    # recurse
+    if origin is list:
+        dtype = get_dtype(args[0])
+        return pa.list_(dtype)
+
+    # generic record type Dict[str, ...]
+    # assume json
+    if origin is dict and len(args) >= 1 and args[0] is str:
+        return PaJSONType()
+    return None
+
+
+def _get_extension_dtype(alias: DataType) -> Optional[pa.DataType]:
+    if not isinstance(alias, str):
+        return None
+
+    alias = alias.lower()
 
     if alias == "json":
         return PaJSONType()
 
     if alias == "pickle":
         return PaPickleType()
+
+    if alias.startswith("ndarray"):
+        return _ndarray_from_string(alias)
+    return None
+
+
+def _get_nested_dtype(alias: DataType) -> Optional[pa.DataType]:
+    if not isinstance(alias, str):
+        return None
 
     dtype = _struct_from_string(alias)
     if dtype is not None:
@@ -56,49 +129,7 @@ def get_dtype(alias: DataType) -> pa.DataType:
     dtype = _list_from_string(alias)
     if dtype is not None:
         return dtype
-
-    dtype = _ndarray_from_string(alias)
-    if dtype is not None:
-        return dtype
-
-    return _get_primitive_dtype(alias)
-
-
-def _get_primitive_dtype(dtype: DataType) -> pa.DataType:
-    # Handle aliases of the form Optional[str]
-    dtype = _unbox_primitive_optional(dtype)
-
-    try:
-        return pa.lib.ensure_type(dtype)
-    except Exception:
-        pass
-
-    try:
-        return pa.from_numpy_dtype(dtype)
-    except Exception:
-        pass
-
-    raise ValueError(f"Unsupported dtype '{dtype}'")
-
-
-def _unbox_primitive_optional(dtype: DataType) -> DataType:
-    """
-    Unbox type aliases of the form `Optional[str]`.
-    """
-    if _is_primitive_optional(dtype):
-        dtype = get_args(dtype)[0]
-    return dtype
-
-
-def _is_primitive_optional(dtype: DataType) -> bool:
-    """
-    Check if dtype is an optional of a primitive type like `Optional[str]`.
-    """
-    return (
-        get_origin(dtype) is Union
-        and len(get_args(dtype)) == 2
-        and isinstance(None, get_args(dtype)[1])
-    )
+    return None
 
 
 def _struct_from_string(alias: str) -> Optional[pa.DataType]:
@@ -126,13 +157,6 @@ def _struct_from_string(alias: str) -> Optional[pa.DataType]:
     except ValueError as exc:
         raise ValueError(f"Invalid struct alias {alias}") from exc
     return pa.struct(fields)
-
-
-def _struct_from_fields(fields: Fields) -> pa.DataType:
-    """
-    Construct struct type from a list or dict of fields.
-    """
-    return pa.struct({k: get_dtype(v) for k, v in fields.items()})
 
 
 def _find_split(items: str):

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pyarrow as pa
@@ -42,6 +42,8 @@ from elbow.dtypes import DataType, PaJSONType, PaNDArrayType, PaPickleType, get_
         ("pickle", PaPickleType()),
         ("ndarray<float32>", PaNDArrayType(pa.float32())),
         (Optional[str], pa.string()),
+        (List[str], pa.list_(pa.string())),
+        (Dict[str, Any], PaJSONType()),
     ],
 )
 def test_get_dtype(test_input: DataType, expected: pa.DataType):
