@@ -1,5 +1,7 @@
+import logging
 import os
-from concurrent.futures import ProcessPoolExecutor
+import shutil
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from functools import partial
 from glob import iglob
@@ -8,6 +10,7 @@ from typing import Iterable, Optional, Union
 
 import pandas as pd
 import pyarrow.parquet as pq
+from pyarrow import ArrowInvalid
 
 from elbow.extractors import Extractor
 from elbow.filters import FileModifiedIndex, hash_partitioner
@@ -17,10 +20,10 @@ from elbow.sinks import BufferedParquetWriter
 from elbow.typing import StrOrPath
 from elbow.utils import atomicopen
 
-__all__ = ["load_table", "load_parquet"]
+__all__ = ["build_table", "build_parquet"]
 
 
-def load_table(
+def build_table(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     max_failures: Optional[int] = 0,
@@ -50,13 +53,14 @@ def load_table(
     return df
 
 
-def load_parquet(
+def build_parquet(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     where: StrOrPath,
     incremental: bool = False,
     workers: Optional[int] = None,
     max_failures: Optional[int] = 0,
+    overwrite: bool = False,
 ) -> pq.ParquetDataset:
     """
     Extract records from a stream of files and load as a Parquet dataset
@@ -70,12 +74,21 @@ def load_parquet(
         workers: number of parallel processes. If `None` or 1, run in the main
             process. Setting to -1 runs in `os.cpu_count()` processes.
         max_failures: number of failures to tolerate
+        overwrite: overwrite previous results
 
     Returns:
         A PyArrow ParquetDataset handle to the loaded dataset
     """
+    # TODO:
+    #     - generalize sources
+    #     - parallel extraction is a bit awkward due to hashing assignment might consider
+    #       pre-expanding the sources and partitioning.
+
     if not incremental and Path(where).exists():
-        raise FileExistsError(f"Parquet output directory {where} already exists")
+        if overwrite:
+            shutil.rmtree(where)
+        else:
+            raise FileExistsError(f"Parquet output directory {where} already exists")
 
     if workers is None or workers == 0:
         workers = 1
@@ -83,7 +96,7 @@ def load_parquet(
         workers = os.cpu_count()
 
     _worker = partial(
-        _load_parquet_worker,
+        _build_parquet_worker,
         source=source,
         extract=extract,
         where=where,
@@ -94,16 +107,28 @@ def load_parquet(
 
     if workers > 1:
         with ProcessPoolExecutor(workers) as pool:
-            pool.map(_worker, range(workers))
-            pool.shutdown()
+            futures_to_id = {pool.submit(_worker, ii): ii for ii in range(workers)}
+
+            for future in as_completed(futures_to_id):
+                try:
+                    future.result()
+                except Exception as exc:
+                    worker_id = futures_to_id[future]
+                    logging.warning(
+                        "Generated exception in worker %d", worker_id, exc_info=exc
+                    )
     else:
         _worker(0)
 
-    dset = pq.ParquetDataset(where)
+    try:
+        dset = pq.ParquetDataset(where)
+    except (FileNotFoundError, ArrowInvalid):
+        raise RuntimeError("Build parquet pipeline failed")
+
     return dset
 
 
-def _load_parquet_worker(
+def _build_parquet_worker(
     worker_id: int,
     *,
     source: Union[str, Iterable[StrOrPath]],
@@ -131,7 +156,7 @@ def _load_parquet_worker(
         source = filter(partitioner, source)
 
     # Include start time in file name in case of multiple incremental loads.
-    where = where / f"part-{start.strftime('%Y%m%d%H%M%S')}-{worker_id:04d}"
+    where = where / f"part-{start.strftime('%Y%m%d%H%M%S')}-{worker_id:04d}.parquet"
     if where.exists():
         raise FileExistsError(f"Partition {where} already exists")
     where.parent.mkdir(parents=True, exist_ok=True)
@@ -143,4 +168,10 @@ def _load_parquet_worker(
             pipe = Pipeline(
                 source=source, extract=extract, sink=writer, max_failures=max_failures
             )
-            pipe.run()
+            counts = pipe.run()
+
+    # Remove file if no paths were ever assigned.
+    if counts.total == 0:
+        where.unlink()
+
+    return counts

@@ -2,7 +2,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from elbow.loaders import load_parquet
+from elbow.builders import build_parquet
 from tests.utils_for_tests import extract_jsonl
 
 DATASET_SIZE_MB = 17.8
@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     where = Path(tmpdir) / "fake_json.parquet"
 
     tic = time.monotonic()
-    dset = load_parquet(
+    dset = build_parquet(
         source=source,
         extract=extract_jsonl,
         where=where,
