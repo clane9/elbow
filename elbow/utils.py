@@ -158,3 +158,14 @@ def detect_size_units(size: Union[int, float]) -> Tuple[float, str]:
         return size / 1e6, "MB"
     else:
         return size / 1e9, "GB"
+
+
+def cpu_count() -> int:
+    """
+    Get the number of available CPUs.
+    """
+    if "SLURM_CPUS_ON_NODE" in os.environ:
+        count = int(os.environ["SLURM_CPUS_ON_NODE"])
+    else:
+        count = os.cpu_count() or 1
+    return count
