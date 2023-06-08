@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
+from pyarrow import parquet as pq
 
 from elbow import build_parquet, build_table
 from tests.utils_for_tests import extract_jsonl, random_jsonl_batch
@@ -35,9 +36,10 @@ def test_build_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
 
 
 def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
-    pq_path = mod_tmp_path / "dset.parquet"
+    pq_path = mod_tmp_path / "dset.pqds"
 
-    dset = build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+    build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+    dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 1
 
     df = dset.read().to_pandas()
@@ -54,9 +56,10 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     # NOTE: have to wait at least a second to avoid clobbering the previous partition.
     time.sleep(1.0)
 
-    dset2 = build_parquet(
+    build_parquet(
         source=jsonl_dataset, extract=extract_jsonl, where=pq_path, incremental=True
     )
+    dset2 = pq.ParquetDataset(pq_path)
     assert len(dset2.files) == 2
 
     df2 = dset2.read().to_pandas()
@@ -66,9 +69,10 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
 def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset_parallel.parquet"
 
-    dset = build_parquet(
+    build_parquet(
         source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2
     )
+    dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
     df = dset.read().to_pandas()
