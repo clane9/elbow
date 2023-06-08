@@ -1,5 +1,4 @@
 import logging
-import os
 import shutil
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
@@ -9,8 +8,6 @@ from pathlib import Path
 from typing import Iterable, Optional, Union
 
 import pandas as pd
-import pyarrow.parquet as pq
-from pyarrow import ArrowInvalid
 
 from elbow.extractors import Extractor
 from elbow.filters import FileModifiedIndex, hash_partitioner
@@ -18,7 +15,7 @@ from elbow.pipeline import Pipeline
 from elbow.record import RecordBatch
 from elbow.sinks import BufferedParquetWriter
 from elbow.typing import StrOrPath
-from elbow.utils import atomicopen
+from elbow.utils import atomicopen, cpu_count
 
 __all__ = ["build_table", "build_parquet"]
 
@@ -26,6 +23,7 @@ __all__ = ["build_table", "build_parquet"]
 def build_table(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
+    *,
     max_failures: Optional[int] = 0,
 ) -> pd.DataFrame:
     """
@@ -57,11 +55,13 @@ def build_parquet(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     where: StrOrPath,
-    incremental: bool = False,
+    *,
     workers: Optional[int] = None,
-    max_failures: Optional[int] = 0,
+    incremental: bool = False,
     overwrite: bool = False,
-) -> pq.ParquetDataset:
+    max_failures: Optional[int] = 0,
+    worker_id: Optional[int] = None,
+) -> None:
     """
     Extract records from a stream of files and load as a Parquet dataset
 
@@ -70,30 +70,39 @@ def build_parquet(
             Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
         where: path to output parquet dataset directory
-        incremental: update dataset incrementally with only new or changed files.
         workers: number of parallel processes. If `None` or 1, run in the main
-            process. Setting to -1 runs in `os.cpu_count()` processes.
-        max_failures: number of failures to tolerate
-        overwrite: overwrite previous results
-
-    Returns:
-        A PyArrow ParquetDataset handle to the loaded dataset
+            process. Setting to <= 0 runs as many processes as there are cores
+            available.
+        incremental: update dataset incrementally with only new or changed files.
+        overwrite: overwrite previous results.
+        max_failures: number of extract failures to tolerate
+        worker_id: optional worker ID to use when scheduling parallel tasks externally.
+            Specifying the number of workers is required in this case. Incompatible with
+            overwrite.
     """
     # TODO:
     #     - generalize sources
     #     - parallel extraction is a bit awkward due to hashing assignment might consider
-    #       pre-expanding the sources and partitioning.
+    #       pre-expanding the sources and partitioning. But this is susceptible to racing.
 
     if not incremental and Path(where).exists():
         if overwrite:
+            if worker_id is not None:
+                raise FileExistsError(
+                    f"Parquet output directory {where} already exists; "
+                    "can't overwrite when using worker_id"
+                )
             shutil.rmtree(where)
         else:
             raise FileExistsError(f"Parquet output directory {where} already exists")
 
-    if workers is None or workers == 0:
+    if worker_id is not None:
+        if workers is None or workers <= 0:
+            raise ValueError("workers >= 0 is required when passing worker_id")
+    elif workers is None:
         workers = 1
-    elif workers < 0:
-        workers = os.cpu_count()
+    elif workers <= 0:
+        workers = cpu_count()
 
     _worker = partial(
         _build_parquet_worker,
@@ -105,7 +114,11 @@ def build_parquet(
         max_failures=max_failures,
     )
 
-    if workers > 1:
+    if workers == 1:
+        _worker(0)
+    elif worker_id is not None:
+        _worker(worker_id)
+    else:
         with ProcessPoolExecutor(workers) as pool:
             futures_to_id = {pool.submit(_worker, ii): ii for ii in range(workers)}
 
@@ -117,15 +130,6 @@ def build_parquet(
                     logging.warning(
                         "Generated exception in worker %d", worker_id, exc_info=exc
                     )
-    else:
-        _worker(0)
-
-    try:
-        dset = pq.ParquetDataset(where)
-    except (FileNotFoundError, ArrowInvalid):
-        raise RuntimeError("Build parquet pipeline failed")
-
-    return dset
 
 
 def _build_parquet_worker(
