@@ -2,8 +2,8 @@ import time
 from pathlib import Path
 
 import pytest
-from pytest_benchmark.fixture import BenchmarkFixture
 from pyarrow import parquet as pq
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from elbow import build_parquet, build_table
 from tests.utils_for_tests import extract_jsonl, random_jsonl_batch
