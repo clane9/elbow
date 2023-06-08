@@ -56,10 +56,10 @@ def build_parquet(
     extract: Extractor,
     where: StrOrPath,
     *,
-    incremental: bool = False,
     workers: Optional[int] = None,
-    max_failures: Optional[int] = 0,
+    incremental: bool = False,
     overwrite: bool = False,
+    max_failures: Optional[int] = 0,
     worker_id: Optional[int] = None,
 ) -> None:
     """
@@ -70,12 +70,12 @@ def build_parquet(
             Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
         where: path to output parquet dataset directory
-        incremental: update dataset incrementally with only new or changed files.
         workers: number of parallel processes. If `None` or 1, run in the main
             process. Setting to <= 0 runs as many processes as there are cores
             available.
-        max_failures: number of failures to tolerate
+        incremental: update dataset incrementally with only new or changed files.
         overwrite: overwrite previous results.
+        max_failures: number of extract failures to tolerate
         worker_id: optional worker ID to use when scheduling parallel tasks externally.
             Specifying the number of workers is required in this case. Incompatible with
             overwrite.
