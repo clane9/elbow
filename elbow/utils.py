@@ -110,7 +110,11 @@ def atomicopen(path: StrOrPath, mode: str = "w", **kwargs):
         raise exc
     else:
         file.close()
-        os.replace(file.name, path)
+        # don't bother replacing if we didn't end up writing anything
+        if os.stat(file.name).st_size > 0:
+            os.replace(file.name, path)
+        else:
+            os.remove(file.name)
 
 
 def parse_size(size: str) -> int:
