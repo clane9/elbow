@@ -67,14 +67,31 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
 
 
 def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
-    pq_path = mod_tmp_path / "dset_parallel.parquet"
+    pq_path = mod_tmp_path / "dset_parallel.pqds"
 
     build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2)
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
     df = dset.read().to_pandas()
-    # NOTE: only + 1 bc the new batch is no longer new
+    # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
+    assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
+
+
+def test_build_parquet_partial(jsonl_dataset: str, mod_tmp_path: Path):
+    pq_path = mod_tmp_path / "dset_partial.pqds"
+
+    build_parquet(
+        source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2, worker_id=0
+    )
+    build_parquet(
+        source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2, worker_id=1
+    )
+    dset = pq.ParquetDataset(pq_path)
+    assert len(dset.files) == 2
+
+    df = dset.read().to_pandas()
+    # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
     assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
 
 

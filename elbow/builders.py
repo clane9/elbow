@@ -85,21 +85,20 @@ def build_parquet(
     #     - parallel extraction is a bit awkward due to hashing assignment might consider
     #       pre-expanding the sources and partitioning. But this is susceptible to racing.
 
-    if not incremental and Path(where).exists():
+    if worker_id is not None:
         if overwrite:
-            if worker_id is not None:
-                raise FileExistsError(
-                    f"Parquet output directory {where} already exists; "
-                    "can't overwrite when using worker_id"
-                )
+            raise ValueError("Can't overwrite when using worker_id")
+        if workers is None or workers <= 0:
+            raise ValueError("workers > 0 is required when using worker_id")
+
+    inplace = incremental or worker_id is not None
+    if Path(where).exists() and not inplace:
+        if overwrite:
             shutil.rmtree(where)
         else:
             raise FileExistsError(f"Parquet output directory {where} already exists")
 
-    if worker_id is not None:
-        if workers is None or workers <= 0:
-            raise ValueError("workers >= 0 is required when passing worker_id")
-    elif workers is None:
+    if workers is None:
         workers = 1
     elif workers <= 0:
         workers = cpu_count()
