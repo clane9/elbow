@@ -111,6 +111,7 @@ def build_parquet(
         incremental=incremental,
         workers=workers,
         max_failures=max_failures,
+        logger=logging.getLogger(),
     )
 
     if workers == 1:
@@ -140,7 +141,11 @@ def _build_parquet_worker(
     incremental: bool,
     workers: int,
     max_failures: Optional[int],
+    logger: logging.Logger,
 ):
+    # HACK: reassigning the root logger is not the best
+    logging.root = logger  # type: ignore
+
     start = datetime.now()
     where = Path(where)
     if isinstance(source, str):

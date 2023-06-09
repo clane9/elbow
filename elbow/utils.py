@@ -31,7 +31,7 @@ class RepetitiveFilter(logging.Filter):
 
 
 def setup_logging(
-    level: Union[int, str] = "INFO",
+    level: Optional[Union[int, str]] = None,
     max_repeats: Optional[int] = 5,
     log_path: Optional[StrOrPath] = None,
 ):
@@ -42,7 +42,8 @@ def setup_logging(
     formatter = logging.Formatter(fmt, datefmt="%y-%m-%d %H:%M:%S")
 
     logger = logging.getLogger()
-    logger.setLevel(level)
+    if level is not None:
+        logger.setLevel(level)
 
     # clean up any pre-existing filters and handlers
     for f in logger.filters:
@@ -55,13 +56,13 @@ def setup_logging(
 
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(level)
+    stream_handler.setLevel(logger.level)
     logger.addHandler(stream_handler)
 
     if log_path is not None:
         file_handler = logging.FileHandler(log_path, mode="a")
         file_handler.setFormatter(formatter)
-        file_handler.setLevel(level)
+        file_handler.setLevel(logger.level)
         logger.addHandler(file_handler)
 
     # Redefining the root logger is not strictly best practice.
