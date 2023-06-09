@@ -38,7 +38,7 @@ def setup_logging(
     """
     Setup root logger.
     """
-    fmt = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)4d]: " "%(message)s"
+    fmt = "[%(levelname)s %(asctime)s]: " "%(message)s"
     formatter = logging.Formatter(fmt, datefmt="%y-%m-%d %H:%M:%S")
 
     logger = logging.getLogger()
