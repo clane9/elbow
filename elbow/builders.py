@@ -56,11 +56,11 @@ def build_parquet(
     extract: Extractor,
     where: StrOrPath,
     *,
-    workers: Optional[int] = None,
     incremental: bool = False,
     overwrite: bool = False,
-    max_failures: Optional[int] = 0,
+    workers: Optional[int] = None,
     worker_id: Optional[int] = None,
+    max_failures: Optional[int] = 0,
 ) -> None:
     """
     Extract records from a stream of files and load as a Parquet dataset
@@ -70,15 +70,15 @@ def build_parquet(
             Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
         where: path to output parquet dataset directory
+        incremental: update dataset incrementally with only new or changed files.
+        overwrite: overwrite previous results.
         workers: number of parallel processes. If `None` or 1, run in the main
             process. Setting to <= 0 runs as many processes as there are cores
             available.
-        incremental: update dataset incrementally with only new or changed files.
-        overwrite: overwrite previous results.
-        max_failures: number of extract failures to tolerate
         worker_id: optional worker ID to use when scheduling parallel tasks externally.
             Specifying the number of workers is required in this case. Incompatible with
             overwrite.
+        max_failures: number of extract failures to tolerate
     """
     # TODO:
     #     - generalize sources
@@ -165,7 +165,7 @@ def _build_parquet_worker(
         raise FileExistsError(f"Partition {where} already exists")
     where.parent.mkdir(parents=True, exist_ok=True)
 
-    # Using atomicopen to avoid partial output files
+    # Using atomicopen to avoid partial output files and empty file errors.
     with atomicopen(where, "wb") as f:
         with BufferedParquetWriter(where=f) as writer:
             # TODO: should this just be a function?
@@ -173,9 +173,5 @@ def _build_parquet_worker(
                 source=source, extract=extract, sink=writer, max_failures=max_failures
             )
             counts = pipe.run()
-
-    # Remove file if no paths were ever assigned.
-    if counts.total == 0:
-        where.unlink()
 
     return counts
