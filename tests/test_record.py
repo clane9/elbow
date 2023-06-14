@@ -55,6 +55,12 @@ def test_record_merge():
         rec_a + rec_c
 
 
+def test_record_with_prefix():
+    rec = record.Record({"a": 1, "b": 2.3}, types={"a": "int32"})
+    rec = rec.with_prefix("A")
+    assert list(rec.keys()) == ["A__a", "A__b"]
+
+
 def test_record_from_dataclass():
     rec = record.Record.from_dataclass(Record(1, 2.3, "abc"))
 
@@ -83,6 +89,9 @@ def test_as_record():
 def test_concat():
     rec = record.concat([{"a": 1, "b": 2.3}, {"c": "abc"}, {"d": "def"}])
     assert list(rec.keys()) == ["a", "b", "c", "d"]
+
+    rec = record.concat({"A": {"a": 1, "b": 2.3}, "B": {"a": "abc"}})
+    assert list(rec.keys()) == ["A__a", "A__b", "B__a"]
 
 
 def test_record_batch():
