@@ -4,15 +4,15 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Elbow is a library for extracting data from a bunch of files and loading into a table (and that's it).
+Elbow helps you "lift" data from a bunch of files and load into a table.
 
-## Examples
+## Example
 
 ```python
 import json
 
 import pandas as pd
-from elbow import build_table, build_parquet
+from elbow import build_parquet
 
 # Extract records from JSON-lines
 def extract(path):
@@ -20,12 +20,6 @@ def extract(path):
         for line in f:
             record = json.loads(line)
             yield record
-
-# Load as a pandas dataframe
-df = build_table(
-    source="**/*.json",
-    extract=extract,
-)
 
 # Load as a parquet dataset (in parallel)
 build_parquet(
@@ -44,6 +38,12 @@ A pre-release version can be installed with
 
 ```
 pip install elbow
+```
+
+A bleeding edge version can be installed with.
+
+```
+pip install git+https://github.com/cmi-dair/elbow.git
 ```
 
 ## Other (better) projects
