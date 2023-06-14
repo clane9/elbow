@@ -102,11 +102,28 @@ class Record(dict):
         """
         return {**self}
 
-    def merge(self, other: Any) -> "Record":
+    def merge(self, other: RecordLike) -> "Record":
         """
         Merge with another record.
         """
-        return _merge(self, other)
+        other = as_record(other)
+        if not set(self).isdisjoint(other):
+            raise ValueError("Records contain duplicate fields; can't merge")
+
+        data = {**self, **other}
+        types = {**self._types, **other._types}
+        return Record(data, types)
+
+    def with_prefix(self, prefix: str, sep: Optional[str] = "__") -> "Record":
+        """
+        Construct a new record with `prefix` prepended to all keys, optionally separated
+        by `sep`.
+        """
+        if sep:
+            prefix = prefix + sep
+        data = {prefix + k: v for k, v in self.items()}
+        types = {prefix + k: v for k, v in self._types.items()}
+        return Record(data, types)
 
     @classmethod
     def from_dataclass(cls, obj: Any):
@@ -268,28 +285,30 @@ class RecordBatch:
         return len(self._batch)
 
 
-def concat(objs: Iterable[RecordLike]) -> Record:
+def concat(
+    records: Union[Iterable[RecordLike], Dict[str, RecordLike]],
+    sep: Optional[str] = "__",
+) -> Record:
     """
-    Concatenate multiple RecordLikes into a single record.
+    Concatenate multiple `records` into a single record. Optionally, `records` can be a
+    dictionary mapping groups to records, in which case the group name will be prefixed
+    to all fields in the record before concatenating.
     """
-    rec = Record()
-    for other in objs:
-        rec = _merge(rec, other)
-    return rec
+    if isinstance(records, dict):
+        cast_records = [
+            as_record(rec).with_prefix(group, sep=sep) for group, rec in records.items()
+        ]
+    else:
+        cast_records = [as_record(rec) for rec in records]
 
+    data: Dict[str, Any] = {}
+    types: Dict[str, DataType] = {}
+    for rec in cast_records:
+        if not set(rec).isdisjoint(data):
+            raise ValueError("Records contain duplicate fields; can't concatenate")
+        data.update(rec)
+        types.update(rec._types)
 
-def _merge(rec: RecordLike, other: RecordLike) -> Record:
-    """
-    Merge one RecordLike with another.
-    """
-    rec = as_record(rec)
-    other = as_record(other)
-
-    if not set(rec).isdisjoint(other):
-        raise ValueError("Can't merge records with overlapping fields")
-
-    data = {**rec, **other}
-    types = {**rec._types, **other._types}
     return Record(data, types)
 
 
