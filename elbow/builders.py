@@ -15,7 +15,7 @@ from elbow.pipeline import Pipeline
 from elbow.record import RecordBatch
 from elbow.sinks import BufferedParquetWriter
 from elbow.typing import StrOrPath
-from elbow.utils import atomicopen, cpu_count
+from elbow.utils import atomicopen, cpu_count, setup_logging
 
 __all__ = ["build_table", "build_parquet"]
 
@@ -111,6 +111,7 @@ def build_parquet(
         incremental=incremental,
         workers=workers,
         max_failures=max_failures,
+        log_level=logging.getLogger().level,
     )
 
     if workers == 1:
@@ -140,7 +141,10 @@ def _build_parquet_worker(
     incremental: bool,
     workers: int,
     max_failures: Optional[int],
+    log_level: int,
 ):
+    setup_logging(log_level)
+
     start = datetime.now()
     where = Path(where)
     if isinstance(source, str):
