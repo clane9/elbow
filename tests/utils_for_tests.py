@@ -5,8 +5,8 @@ from typing import Any, Dict
 
 import numpy as np
 
-from elbow import as_record
 from elbow.extractors import file_meta
+from elbow.record import as_record
 from elbow.typing import StrOrPath
 
 

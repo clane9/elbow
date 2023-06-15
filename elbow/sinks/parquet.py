@@ -1,3 +1,5 @@
+import logging
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import BinaryIO, Optional, Union
 
 import pyarrow as pa
@@ -38,12 +40,14 @@ class BufferedParquetWriter:
         schema: Optional[pa.Schema] = None,
         buffer_size: Union[str, int] = "64 MiB",
         batch_size: int = 256,
+        blocking: bool = False,
         **kwargs,
     ):
         self.where = where
         self.schema = schema
         self.buffer_size = buffer_size
         self.batch_size = batch_size
+        self.blocking = blocking
 
         if isinstance(buffer_size, str):
             self._buffer_size_bytes = parse_size(buffer_size)
@@ -55,6 +59,8 @@ class BufferedParquetWriter:
         self._batch = RecordBatch(schema=schema, strict=(schema is not None))
         self._table: Optional[pa.Table] = None
         self._schema: Optional[pa.Schema] = schema
+        self._pool = ThreadPoolExecutor(max_workers=1)
+        self._future: Optional[Future] = None
         self._total_bytes = 0
         self._buffer_bytes = 0
 
@@ -69,7 +75,7 @@ class BufferedParquetWriter:
             self._push_batch()
 
         if self._buffer_bytes > self._buffer_size_bytes:
-            self.flush()
+            self._flush(blocking=self.blocking)
 
     def _push_batch(self):
         """
@@ -92,11 +98,15 @@ class BufferedParquetWriter:
             # For all subsequent batches, use a strict schema
             self._batch = RecordBatch(schema=self._schema, strict=True)
 
-    def flush(self):
+    def _flush(self, blocking: bool = True):
         """
         Flush the table buffer.
         """
         self._push_batch()
+
+        if self._future is not None and self._future.running():
+            logging.info("Waiting for previous batch to finish writing")
+            self._future.result()
 
         if self._table is not None:
             if self._writer is None:
@@ -109,9 +119,13 @@ class BufferedParquetWriter:
                     **self._writer_kwargs,
                 )
 
-            self._writer.write(
-                self._table, row_group_size=(2 * self._buffer_size_bytes)
-            )
+            row_group_size = 2 * self._buffer_size_bytes
+            if blocking:
+                self._writer.write_table(self._table, row_group_size)
+            else:
+                self._future = self._pool.submit(
+                    self._writer.write_table, self._table, row_group_size
+                )
             self._total_bytes += self._table.get_total_buffer_size()
             self._table = None
             self._buffer_bytes = 0
@@ -120,7 +134,7 @@ class BufferedParquetWriter:
         """
         Flush the buffer and close the writer.
         """
-        self.flush()
+        self._flush(blocking=True)
         if self._writer is not None:
             self._writer.close()
 

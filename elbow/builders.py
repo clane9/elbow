@@ -17,8 +17,6 @@ from elbow.sinks import BufferedParquetWriter
 from elbow.typing import StrOrPath
 from elbow.utils import atomicopen, cpu_count, setup_logging
 
-__all__ = ["build_table", "build_parquet"]
-
 
 def build_table(
     source: Union[str, Iterable[StrOrPath]],
@@ -54,7 +52,7 @@ def build_table(
 def build_parquet(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
-    where: StrOrPath,
+    output: StrOrPath,
     *,
     incremental: bool = False,
     overwrite: bool = False,
@@ -63,18 +61,17 @@ def build_parquet(
     max_failures: Optional[int] = 0,
 ) -> None:
     """
-    Extract records from a stream of files and load as a Parquet dataset
+    Extract records from a stream of files and save as a Parquet dataset
 
     Args:
         source: shell-style file pattern as in `glob.glob()` or iterable of paths.
             Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
-        where: path to output parquet dataset directory
+        output: path to output parquet dataset directory
         incremental: update dataset incrementally with only new or changed files.
         overwrite: overwrite previous results.
         workers: number of parallel processes. If `None` or 1, run in the main
-            process. Setting to <= 0 runs as many processes as there are cores
-            available.
+            process. Setting to -1 runs as many processes as there are cores available.
         worker_id: optional worker ID to use when scheduling parallel tasks externally.
             Specifying the number of workers is required in this case. Incompatible with
             overwrite.
@@ -84,41 +81,40 @@ def build_parquet(
     #     - generalize sources
     #     - parallel extraction is a bit awkward due to hashing assignment might consider
     #       pre-expanding the sources and partitioning. But this is susceptible to racing.
-
-    if worker_id is not None:
-        if overwrite:
-            raise ValueError("Can't overwrite when using worker_id")
-        if workers is None or workers <= 0:
-            raise ValueError("workers > 0 is required when using worker_id")
-
-    inplace = incremental or worker_id is not None
-    if Path(where).exists() and not inplace:
-        if overwrite:
-            shutil.rmtree(where)
-        else:
-            raise FileExistsError(f"Parquet output directory {where} already exists")
-
     if workers is None:
         workers = 1
-    elif workers <= 0:
+    elif workers == -1:
         workers = cpu_count()
+    elif workers <= 0:
+        raise ValueError(f"Invalid workers {workers}; expected -1 or > 0")
+
+    if worker_id is not None:
+        if not 0 <= worker_id < workers:
+            raise ValueError(
+                f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
+            )
+        if overwrite:
+            raise ValueError("Can't overwrite when using worker_id")
+
+    inplace = incremental or worker_id is not None
+    if Path(output).exists() and not inplace:
+        if overwrite:
+            shutil.rmtree(output)
+        else:
+            raise FileExistsError(f"Parquet output directory {output} already exists")
 
     _worker = partial(
         _build_parquet_worker,
         source=source,
         extract=extract,
-        where=where,
+        output=output,
         incremental=incremental,
         workers=workers,
         max_failures=max_failures,
         log_level=logging.getLogger().level,
     )
 
-    if workers == 1:
-        _worker(0)
-    elif worker_id is not None:
-        _worker(worker_id)
-    else:
+    if worker_id is None and workers > 1:
         with ProcessPoolExecutor(workers) as pool:
             futures_to_id = {pool.submit(_worker, ii): ii for ii in range(workers)}
 
@@ -130,6 +126,10 @@ def build_parquet(
                     logging.warning(
                         "Generated exception in worker %d", worker_id, exc_info=exc
                     )
+    elif worker_id is not None:
+        _worker(worker_id)
+    else:
+        _worker(0)
 
 
 def _build_parquet_worker(
@@ -137,7 +137,7 @@ def _build_parquet_worker(
     *,
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
-    where: StrOrPath,
+    output: StrOrPath,
     incremental: bool,
     workers: int,
     max_failures: Optional[int],
@@ -146,14 +146,14 @@ def _build_parquet_worker(
     setup_logging(log_level)
 
     start = datetime.now()
-    where = Path(where)
+    output = Path(output)
     if isinstance(source, str):
         source = iglob(source, recursive=True)
 
-    if incremental and where.exists():
+    if incremental and output.exists():
         # NOTE: Race to read index while other workers try to write.
         # But it shouldn't matter since each worker gets a unique partition (?).
-        file_mod_index = FileModifiedIndex.from_parquet(where)
+        file_mod_index = FileModifiedIndex.from_parquet(output)
         source = filter(file_mod_index, source)
 
     # TODO: maybe let user specify partition key function? By default we will get
@@ -163,13 +163,14 @@ def _build_parquet_worker(
         source = filter(partitioner, source)
 
     # Include start time in file name in case of multiple incremental loads.
-    where = where / f"part-{start.strftime('%Y%m%d%H%M%S')}-{worker_id:04d}.parquet"
-    if where.exists():
-        raise FileExistsError(f"Partition {where} already exists")
-    where.parent.mkdir(parents=True, exist_ok=True)
+    start_fmt = start.strftime('%Y%m%d%H%M%S')
+    output = output / f"part-{start_fmt}-{worker_id:04d}-of-{workers:04d}.parquet"
+    if output.exists():
+        raise FileExistsError(f"Partition {output} already exists")
+    output.parent.mkdir(parents=True, exist_ok=True)
 
     # Using atomicopen to avoid partial output files and empty file errors.
-    with atomicopen(where, "wb") as f:
+    with atomicopen(output, "wb") as f:
         with BufferedParquetWriter(where=f) as writer:
             # TODO: should this just be a function?
             pipe = Pipeline(

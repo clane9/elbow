@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "elbow"
-description = "Extract data from a bunch of files and load into a table"
+description = "Lift special-purpose data into common tabular formats for analytics 💪"
 authors = [
     {name = "Connor Lane", email = "connor.lane858@gmail.com"},
 ]

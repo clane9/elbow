@@ -19,10 +19,10 @@ build
 .mypy_cache
 htmlcov
 
-# Benchmark data/results
-benchmarks/*/data
+# Example data/results
+example/images
+example/images.pqds
 *.prof
-
 
 # VScode IDE
 .vscode/
