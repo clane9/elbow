@@ -163,7 +163,7 @@ def _build_parquet_worker(
         source = filter(partitioner, source)
 
     # Include start time in file name in case of multiple incremental loads.
-    start_fmt = start.strftime('%Y%m%d%H%M%S')
+    start_fmt = start.strftime("%Y%m%d%H%M%S")
     output = output / f"part-{start_fmt}-{worker_id:04d}-of-{workers:04d}.parquet"
     if output.exists():
         raise FileExistsError(f"Partition {output} already exists")
