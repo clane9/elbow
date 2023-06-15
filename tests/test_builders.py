@@ -69,7 +69,9 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
 def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset_parallel.pqds"
 
-    build_parquet(source=jsonl_dataset, extract=extract_jsonl, output=pq_path, workers=2)
+    build_parquet(
+        source=jsonl_dataset, extract=extract_jsonl, output=pq_path, workers=2
+    )
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
