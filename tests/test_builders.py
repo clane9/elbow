@@ -5,7 +5,7 @@ import pytest
 from pyarrow import parquet as pq
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from elbow import build_parquet, build_table
+from elbow.builders import build_parquet, build_table
 from tests.utils_for_tests import extract_jsonl, random_jsonl_batch
 
 NUM_BATCHES = 64
@@ -38,7 +38,7 @@ def test_build_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
 def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset.pqds"
 
-    build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+    build_parquet(source=jsonl_dataset, extract=extract_jsonl, output=pq_path)
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 1
 
@@ -46,7 +46,7 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     with pytest.raises(FileExistsError):
-        build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path)
+        build_parquet(source=jsonl_dataset, extract=extract_jsonl, output=pq_path)
 
     # Re-write batch 0
     random_jsonl_batch(mod_tmp_path, BATCH_SIZE, seed=SEED)
@@ -57,7 +57,7 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     time.sleep(1.0)
 
     build_parquet(
-        source=jsonl_dataset, extract=extract_jsonl, where=pq_path, incremental=True
+        source=jsonl_dataset, extract=extract_jsonl, output=pq_path, incremental=True
     )
     dset2 = pq.ParquetDataset(pq_path)
     assert len(dset2.files) == 2
@@ -69,7 +69,7 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
 def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset_parallel.pqds"
 
-    build_parquet(source=jsonl_dataset, extract=extract_jsonl, where=pq_path, workers=2)
+    build_parquet(source=jsonl_dataset, extract=extract_jsonl, output=pq_path, workers=2)
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
@@ -84,14 +84,14 @@ def test_build_parquet_partial(jsonl_dataset: str, mod_tmp_path: Path):
     build_parquet(
         source=jsonl_dataset,
         extract=extract_jsonl,
-        where=pq_path,
+        output=pq_path,
         workers=2,
         worker_id=0,
     )
     build_parquet(
         source=jsonl_dataset,
         extract=extract_jsonl,
-        where=pq_path,
+        output=pq_path,
         workers=2,
         worker_id=1,
     )

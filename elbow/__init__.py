@@ -1,8 +1,5 @@
 """
-Extract data from a bunch of files and load into a table.
+Lift special-purpose data into common tabular formats for analytics 💪
 """
 
 from ._version import __version__, __version_tuple__  # noqa
-from .builders import *  # noqa
-from .pipeline import *  # noqa
-from .record import *  # noqa
