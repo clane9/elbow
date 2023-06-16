@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from elbow.extractors import file_meta
+from elbow.extractors import extract_file_meta
 from elbow.record import as_record
 from elbow.typing import StrOrPath
 
@@ -36,7 +36,7 @@ def random_string(rng: np.random.Generator, length: int):
 
 
 def extract_jsonl(path: StrOrPath):
-    metadata = as_record(file_meta(path))
+    metadata = as_record(extract_file_meta(path))
 
     with open(path) as f:
         for line in f:

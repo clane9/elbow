@@ -7,8 +7,6 @@ from typing import Optional
 
 from elbow.typing import StrOrPath
 
-__all__ = ["FileMetadata", "file_meta"]
-
 
 @dataclass
 class FileMetadata:
@@ -23,7 +21,7 @@ class FileMetadata:
     mod_time: Optional[float]
 
 
-def file_meta(path: StrOrPath) -> FileMetadata:
+def extract_file_meta(path: StrOrPath) -> FileMetadata:
     """
     File metadata extractor.
     """
