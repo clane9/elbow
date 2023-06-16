@@ -1,2 +1,2 @@
-from .base import *  # noqa
-from .meta import *  # noqa
+from .base import Extractor  # noqa
+from .file_meta import FileMetadata, extract_file_meta  # noqa

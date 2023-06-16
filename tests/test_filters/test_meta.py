@@ -4,7 +4,7 @@ from typing import List
 import pyarrow.parquet as pq
 import pytest
 
-from elbow.extractors import file_meta
+from elbow.extractors import extract_file_meta
 from elbow.filters import FileModifiedIndex
 from elbow.record import RecordBatch
 
@@ -25,7 +25,7 @@ def file_index_parquet(tmp_path: Path, dummy_files: List[Path]) -> Path:
 
     index = RecordBatch()
     for path in dummy_files:
-        metadata = file_meta(path)
+        metadata = extract_file_meta(path)
         index.append(metadata)
 
     index = index.to_arrow()
