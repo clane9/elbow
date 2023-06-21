@@ -1,22 +1,16 @@
 import fnmatch
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, List, Optional, Union
 
 from elbow.typing import StrOrPath
 
-__all__ = ["crawldir"]
+__all__ = ["Crawler"]
 
 
-def crawldir(
-    root: StrOrPath,
-    include: Optional[List[str]] = None,
-    exclude: Optional[List[str]] = None,
-    skip: Optional[List[str]] = None,
-    files_only: bool = False,
-    dirs_only: bool = False,
-    follow_links: bool = False,
-) -> Generator[Path, None, None]:
+@dataclass
+class Crawler:
     """
     Crawl a directory and generate a stream of file and directory paths.
 
@@ -28,33 +22,49 @@ def crawldir(
         files_only: only return file paths
         dirs_only: only return directory paths
         follow_links: whether to follow symbolic links
-
-    Yields:
-        Crawled file paths.
     """
-    if files_only and dirs_only:
-        raise ValueError("Can't specify both files_only and dirs_only")
 
-    include = _tolist(include)
-    exclude = _tolist(exclude)
-    skip = _tolist(skip)
+    root: StrOrPath
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
+    skip: Optional[List[str]] = None
+    files_only: bool = False
+    dirs_only: bool = False
+    follow_links: bool = False
 
-    for subdir, dirnames, fnames in os.walk(root, followlinks=follow_links):
-        names = []
-        if not files_only:
-            names.extend(dirnames)
-        if not dirs_only:
-            names.extend(fnames)
+    def __post_init__(self):
+        if self.files_only and self.dirs_only:
+            raise ValueError("Can't specify both files_only and dirs_only")
 
-        names = _filter_include(names, include)
-        names = _filter_exclude(names, exclude)
+    def crawl(self) -> Generator[Path, None, None]:
+        """
+        Crawl the directory.
+        """
+        include = _tolist(self.include)
+        exclude = _tolist(self.exclude)
+        skip = _tolist(self.skip)
 
-        subpath = Path(subdir)
-        for name in names:
-            yield subpath / name
+        for subdir, dirnames, fnames in os.walk(
+            self.root, followlinks=self.follow_links
+        ):
+            names = []
+            if not self.files_only:
+                names.extend(dirnames)
+            if not self.dirs_only:
+                names.extend(fnames)
 
-        if skip:
-            _remove_skip(subdir, dirnames, skip)
+            names = _filter_include(names, include)
+            names = _filter_exclude(names, exclude)
+
+            subpath = Path(subdir)
+            for name in names:
+                yield subpath / name
+
+            if skip:
+                _remove_skip(subdir, dirnames, skip)
+
+    def __iter__(self):
+        return self.crawl()
 
 
 def _tolist(val: Optional[Union[str, List[str]]]) -> List[str]:

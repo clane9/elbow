@@ -1,11 +1,13 @@
 import time
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from pyarrow import parquet as pq
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from elbow.builders import build_parquet, build_table
+from elbow.sources.filesystem import Crawler
 from tests.utils_for_tests import extract_jsonl, random_jsonl_batch
 
 NUM_BATCHES = 64
@@ -101,6 +103,25 @@ def test_build_parquet_partial(jsonl_dataset: str, mod_tmp_path: Path):
     assert len(dset.files) == 2
 
     df = dset.read().to_pandas()
+    # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
+    assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
+
+
+def test_build_parquet_with_crawl(mod_tmp_path: Path):
+    pq_path = mod_tmp_path / "dset_crawl.pqds"
+
+    source = Crawler(
+        root=mod_tmp_path,
+        include=["*.json"],
+        files_only=True,
+    )
+    build_parquet(
+        source=source,
+        extract=extract_jsonl,
+        output=pq_path,
+        workers=2,
+    )
+    df = pd.read_parquet(pq_path)
     # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
     assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
 
