@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from elbow.sources import crawldir
+from elbow.sources.filesystem import Crawler
 
 
 @pytest.fixture
@@ -20,8 +20,8 @@ def dummy_tree(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_crawldirs(dummy_tree: Path):
-    paths = crawldir(
+def test_crawler(dummy_tree: Path):
+    paths = Crawler(
         root=dummy_tree,
         include=["*.txt", "*.json"],
         exclude=["b.txt"],
