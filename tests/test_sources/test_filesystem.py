@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from elbow.sources import crawldirs
+from elbow.sources import crawldir
 
 
 @pytest.fixture
@@ -21,9 +21,14 @@ def dummy_tree(tmp_path: Path) -> Path:
 
 
 def test_crawldirs(dummy_tree: Path):
-    paths = list(crawldirs(root=dummy_tree, exclude=".*"))
-    assert sorted(paths) == [
-        dummy_tree / "A" / "b.txt",
+    paths = crawldir(
+        root=dummy_tree,
+        include=["*.txt", "*.json"],
+        exclude=["b.txt"],
+        skip=[".*"],
+        files_only=True,
+    )
+    assert sorted(list(paths)) == [
         dummy_tree / "A" / "c.json",
         dummy_tree / "B" / "b" / "c.txt",
     ]
