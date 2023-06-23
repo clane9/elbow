@@ -24,7 +24,7 @@ def main():
         "--workers",
         metavar="COUNT",
         type=int,
-        help="Number of worker processes. Setting to <= 0 runs as many processes as "
+        help="Number of worker processes. Setting to -1 runs as many processes as "
         "there are cores available. (default: 1)",
         default=1,
     )
