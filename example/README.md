@@ -2,6 +2,14 @@
 
 In this example we'll extract metadata and pixel values from a bunch of fake random images and save as a [Parquet](https://parquet.apache.org/) dataset.
 
+## Install packages
+
+Install some packages if you don't have them already
+
+```sh
+pip install numpy Pillow tqdm
+```
+
 ## Generating fake images
 
 Run the `generate_images.py` script to generate a dataset of fake random images in [images/](images/).
