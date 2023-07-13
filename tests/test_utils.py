@@ -1,7 +1,5 @@
 # pylint: disable=redefined-outer-name
 import logging
-import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -15,30 +13,6 @@ def test_repetitive_filter():
     # default logger already contains the repetitive filter
     for ii in range(10):
         logging.warning("Message: %d", ii)
-
-
-def test_lockopen(tmp_path: Path):
-    fname = tmp_path / "file.txt"
-
-    def _task(task_id: int):
-        with ut.lockopen(fname, mode="a+") as f:
-            t = time.time()
-            lines = f.readlines()
-            last_line = lines[-1] if lines else ""
-            new_line = f"id={task_id}, t={t}"
-            logging.debug(f"last line={last_line}\tnew line={new_line}")
-            time.sleep(0.01)
-            print(new_line, file=f)
-        return task_id
-
-    num_tasks = 10
-    pool = ThreadPoolExecutor(4)
-    for task_id in pool.map(_task, range(num_tasks)):
-        logging.debug(f"Done {task_id}")
-
-    with open(fname) as f:
-        lines = f.readlines()
-    assert len(lines) == num_tasks
 
 
 def test_atomicopen(tmp_path: Path):

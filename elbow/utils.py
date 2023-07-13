@@ -1,4 +1,3 @@
-import fcntl
 import logging
 import os
 import re
@@ -69,22 +68,6 @@ def setup_logging(
     # https://stackoverflow.com/a/7430495
     # But I want the convenience to just call e.g. `logging.info()`.
     logging.root = logger  # type: ignore
-
-
-@contextmanager
-def lockopen(path: StrOrPath, mode: str = "w", **kwargs):
-    """
-    Open a file with an exclusive lock.
-
-    See also: https://github.com/dmfrey/FileLock/blob/master/filelock/filelock.py
-    """
-    file = open(path, mode, **kwargs)
-    fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-    try:
-        yield file
-    finally:
-        fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-        file.close()
 
 
 @contextmanager
