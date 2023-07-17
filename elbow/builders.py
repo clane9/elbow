@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import partial
 from glob import iglob
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -22,6 +22,8 @@ def build_table(
     source: Union[str, Iterable[StrOrPath]],
     extract: Extractor,
     *,
+    workers: Optional[int] = None,
+    worker_id: Optional[int] = None,
     max_failures: Optional[int] = 0,
 ) -> pd.DataFrame:
     """
@@ -31,13 +33,49 @@ def build_table(
         source: shell-style file pattern as in `glob.glob()` or iterable of paths.
             Patterns containing '**' will match any files and zero or more directories
         extract: extract function mapping file paths to records
+        workers: number of parallel processes. If `None` or 1, run in the main
+            process. Setting to -1 runs as many processes as there are cores available.
+        worker_id: optional worker ID to use when scheduling parallel tasks externally.
+            Specifying the number of workers is required in this case. Incompatible with
+            overwrite.
         max_failures: number of failures to tolerate
 
     Returns:
         A DataFrame containing the concatenated records (in arbitrary order)
     """
+    workers, worker_id = _check_workers(workers, worker_id)
+
+    _worker = partial(
+        _build_table_worker,
+        source=source,
+        extract=extract,
+        workers=workers,
+        max_failures=max_failures,
+        log_level=logging.getLogger().level,
+    )
+
+    results = _run_pool(_worker, workers, worker_id)
+    df = pd.concat(results, axis=0, ignore_index=True)
+    return df
+
+
+def _build_table_worker(
+    worker_id: int,
+    *,
+    source: Union[str, Iterable[StrOrPath]],
+    extract: Extractor,
+    workers: int,
+    max_failures: Optional[int],
+    log_level: int,
+):
+    setup_logging(log_level)
+
     if isinstance(source, str):
         source = iglob(source, recursive=True)
+
+    if workers > 1:
+        partitioner = hash_partitioner(worker_id, workers)
+        source = filter(partitioner, source)
 
     batch = RecordBatch()
     pipe = Pipeline(
@@ -77,23 +115,8 @@ def build_parquet(
             overwrite.
         max_failures: number of extract failures to tolerate
     """
-    # TODO:
-    #     - generalize sources
-    #     - parallel extraction is a bit awkward due to hashing assignment might consider
-    #       pre-expanding the sources and partitioning. But this is susceptible to racing.
-    if workers is None:
-        workers = 1
-    elif workers == -1:
-        workers = cpu_count()
-    elif workers <= 0:
-        raise ValueError(f"Invalid workers {workers}; expected -1 or > 0")
-
-    if worker_id is not None:
-        if not 0 <= worker_id < workers:
-            raise ValueError(
-                f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
-            )
-        if overwrite:
+    workers, worker_id = _check_workers(workers, worker_id)
+    if worker_id is not None and overwrite:
             raise ValueError("Can't overwrite when using worker_id")
 
     inplace = incremental or worker_id is not None
@@ -114,22 +137,7 @@ def build_parquet(
         log_level=logging.getLogger().level,
     )
 
-    if worker_id is None and workers > 1:
-        with ProcessPoolExecutor(workers) as pool:
-            futures_to_id = {pool.submit(_worker, ii): ii for ii in range(workers)}
-
-            for future in as_completed(futures_to_id):
-                try:
-                    future.result()
-                except Exception as exc:
-                    worker_id = futures_to_id[future]
-                    logging.warning(
-                        "Generated exception in worker %d", worker_id, exc_info=exc
-                    )
-    elif worker_id is not None:
-        _worker(worker_id)
-    else:
-        _worker(0)
+    _run_pool(_worker, workers, worker_id)
 
 
 def _build_parquet_worker(
@@ -152,7 +160,8 @@ def _build_parquet_worker(
 
     if incremental and output.exists():
         # NOTE: Race to read index while other workers try to write.
-        # But it shouldn't matter since each worker gets a unique partition (?).
+        # But it shouldn't matter since each worker gets a unique partition.
+        # TODO: expose the path_column, mtime_column arguments somewhere.
         file_mod_index = FileModifiedIndex.from_parquet(output)
         source = filter(file_mod_index, source)
 
@@ -179,3 +188,53 @@ def _build_parquet_worker(
             counts = pipe.run()
 
     return counts
+
+
+def _check_workers(
+    workers: Optional[int], worker_id: Optional[int]
+) -> Tuple[int, int]:
+
+    if workers is None:
+        workers = 1
+    elif workers == -1:
+        workers = cpu_count()
+    elif workers <= 0:
+        raise ValueError(f"Invalid workers {workers}; expected -1 or > 0")
+
+    if worker_id is not None:
+        if not 0 <= worker_id < workers:
+            raise ValueError(
+                f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
+            )
+    return workers, worker_id
+
+
+def _run_pool(
+    worker: Callable[[int], Any],
+    workers: int,
+    worker_id: Optional[int],
+) -> List[Any]:
+
+    if worker_id is None and workers > 1:
+        results = []
+        with ProcessPoolExecutor(workers) as pool:
+            futures_to_id = {pool.submit(worker, ii): ii for ii in range(workers)}
+
+            for future in as_completed(futures_to_id):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as exc:
+                    worker_id = futures_to_id[future]
+                    logging.warning(
+                        "Generated exception in worker %d", worker_id, exc_info=exc
+                    )
+
+    elif worker_id is not None:
+        result = worker(worker_id)
+        results = [result]
+    else:
+        result = worker(0)
+        results = [result]
+    
+    return results

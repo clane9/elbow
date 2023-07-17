@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict
 
 import pandas as pd
+from pyarrow import ArrowInvalid
 
 from elbow.typing import StrOrPath
 
@@ -43,7 +44,16 @@ class FileModifiedIndex:
         """
         Initialize index from a parquet file or directory of parquet files.
         """
-        df = pd.read_parquet(path, columns=[path_column, mtime_column])
+        # TODO: maybe try to infer the path/mtime columns more flexibly
+        try:
+            df = pd.read_parquet(
+                path, columns=[path_column, mtime_column], engine="pyarrow"
+            )
+        except ArrowInvalid:
+            raise ValueError(
+                "Parquet table is missing file index columns "
+                f"'{path_column}' and/or '{mtime_column}'"
+            )
         return cls.from_df(df, path_column=path_column, mtime_column=mtime_column)
 
     def filter(self, path: StrOrPath) -> bool:

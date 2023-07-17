@@ -37,6 +37,14 @@ def test_build_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
     assert df.columns.tolist() == expected_columns
 
 
+def test_build_table_parallel(jsonl_dataset: str):
+    df = build_table(source=jsonl_dataset, extract=extract_jsonl, workers=2)
+    assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
+
+    expected_columns = ["file_path", "link_target", "mod_time", "a", "b", "c", "d"]
+    assert df.columns.tolist() == expected_columns
+
+
 def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     pq_path = mod_tmp_path / "dset.pqds"
 
