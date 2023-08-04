@@ -97,6 +97,8 @@ def build_parquet(
     workers: Optional[int] = None,
     worker_id: Optional[int] = None,
     max_failures: Optional[int] = 0,
+    path_column: str = "file_path",
+    mtime_column: str = "mod_time",
 ) -> None:
     """
     Extract records from a stream of files and save as a Parquet dataset
@@ -114,6 +116,8 @@ def build_parquet(
             Specifying the number of workers is required in this case. Incompatible with
             overwrite.
         max_failures: number of extract failures to tolerate
+        path_column: file path column name, only used when `incremental=True`.
+        mtime_column: file path column modified time, only used when `incremental=True`.
     """
     workers, worker_id = _check_workers(workers, worker_id)
     if worker_id is not None and overwrite:
@@ -134,6 +138,8 @@ def build_parquet(
         incremental=incremental,
         workers=workers,
         max_failures=max_failures,
+        path_column=path_column,
+        mtime_column=mtime_column,
         log_level=logging.getLogger().level,
     )
 
@@ -149,6 +155,8 @@ def _build_parquet_worker(
     incremental: bool,
     workers: int,
     max_failures: Optional[int],
+    path_column: str,
+    mtime_column: str,
     log_level: int,
 ):
     setup_logging(log_level)
@@ -161,8 +169,9 @@ def _build_parquet_worker(
     if incremental and output.exists():
         # NOTE: Race to read index while other workers try to write.
         # But it shouldn't matter since each worker gets a unique partition.
-        # TODO: expose the path_column, mtime_column arguments somewhere.
-        file_mod_index = FileModifiedIndex.from_parquet(output)
+        file_mod_index = FileModifiedIndex.from_parquet(
+            output, path_column=path_column, mtime_column=mtime_column
+        )
         source = filter(file_mod_index, source)
 
     # TODO: maybe let user specify partition key function? By default we will get
@@ -198,11 +207,10 @@ def _check_workers(workers: Optional[int], worker_id: Optional[int]) -> Tuple[in
     elif workers <= 0:
         raise ValueError(f"Invalid workers {workers}; expected -1 or > 0")
 
-    if worker_id is not None:
-        if not 0 <= worker_id < workers:
-            raise ValueError(
-                f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
-            )
+    if not (worker_id is None or 0 <= worker_id < workers):
+        raise ValueError(
+            f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
+        )
     return workers, worker_id
 
 
