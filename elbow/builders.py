@@ -117,7 +117,7 @@ def build_parquet(
     """
     workers, worker_id = _check_workers(workers, worker_id)
     if worker_id is not None and overwrite:
-            raise ValueError("Can't overwrite when using worker_id")
+        raise ValueError("Can't overwrite when using worker_id")
 
     inplace = incremental or worker_id is not None
     if Path(output).exists() and not inplace:
@@ -190,10 +190,7 @@ def _build_parquet_worker(
     return counts
 
 
-def _check_workers(
-    workers: Optional[int], worker_id: Optional[int]
-) -> Tuple[int, int]:
-
+def _check_workers(workers: Optional[int], worker_id: Optional[int]) -> Tuple[int, int]:
     if workers is None:
         workers = 1
     elif workers == -1:
@@ -214,7 +211,6 @@ def _run_pool(
     workers: int,
     worker_id: Optional[int],
 ) -> List[Any]:
-
     if worker_id is None and workers > 1:
         results = []
         with ProcessPoolExecutor(workers) as pool:
@@ -236,5 +232,5 @@ def _run_pool(
     else:
         result = worker(0)
         results = [result]
-    
+
     return results
