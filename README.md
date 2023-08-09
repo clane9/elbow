@@ -46,7 +46,7 @@ For a complete example, see [here](example/).
 pip install elbow
 ```
 
-The current development version can be installed with.
+The current development version can be installed with
 
 ```
 pip install git+https://github.com/cmi-dair/elbow.git
