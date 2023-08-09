@@ -42,13 +42,11 @@ For a complete example, see [here](example/).
 
 ## Installation
 
-A pre-release version can be installed with
-
 ```
 pip install elbow
 ```
 
-A bleeding edge version can be installed with.
+The current development version can be installed with
 
 ```
 pip install git+https://github.com/cmi-dair/elbow.git
@@ -65,3 +63,7 @@ There are many other high quality projects for extracting, loading, and transfor
 - [Orchest](https://github.com/orchest/orchest)
 - [Streamz](https://github.com/python-streamz/streamz)
 - [🤗 Datasets](https://github.com/huggingface/datasets)
+
+## Contributing
+
+We welcome contributions of any kind! If you'd like to contribute, please feel free to start a conversation in our [issues](https://github.com/cmi-dair/elbow/issues).
