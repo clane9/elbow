@@ -1,6 +1,6 @@
 # 💪 Elbow
-[![Build](https://github.com/cmi-dair/elbow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/cmi-dair/elbow/actions/workflows/ci.yaml?query=branch%3Amain)
-[![codecov](https://codecov.io/gh/cmi-dair/elbow/branch/main/graph/badge.svg?token=22HWWFWPW5)](https://codecov.io/gh/cmi-dair/elbow)
+[![Build](https://github.com/childmindresearch/elbow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/childmindresearch/elbow/actions/workflows/ci.yaml?query=branch%3Amain)
+[![codecov](https://codecov.io/gh/childmindresearch/elbow/branch/main/graph/badge.svg?token=22HWWFWPW5)](https://codecov.io/gh/childmindresearch/elbow)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -49,7 +49,7 @@ pip install elbow
 The current development version can be installed with
 
 ```
-pip install git+https://github.com/cmi-dair/elbow.git
+pip install git+https://github.com/childmindresearch/elbow.git
 ```
 
 ## Related projects
@@ -66,4 +66,4 @@ There are many other high quality projects for extracting, loading, and transfor
 
 ## Contributing
 
-We welcome contributions of any kind! If you'd like to contribute, please feel free to start a conversation in our [issues](https://github.com/cmi-dair/elbow/issues).
+We welcome contributions of any kind! If you'd like to contribute, please feel free to start a conversation in our [issues](https://github.com/childmindresearch/elbow/issues).
