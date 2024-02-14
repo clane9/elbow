@@ -4,8 +4,8 @@ from typing import Any, Iterable, Optional, Union
 import numpy as np
 import pyarrow as pa
 from pandas.api.extensions import register_extension_dtype
-from pandas.core.arrays import PandasArray
 
+from ._pandas_array import PandasArray
 from .base import PaExtensionArray, PaExtensionScalar, PaExtensionType, PdExtensionDtype
 
 __all__ = [
