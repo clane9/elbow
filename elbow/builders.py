@@ -15,7 +15,9 @@ from elbow.pipeline import Pipeline
 from elbow.record import RecordBatch
 from elbow.sinks import BufferedParquetWriter
 from elbow.typing import StrOrPath
-from elbow.utils import atomicopen, cpu_count, setup_logging
+from elbow.utils import atomicopen, cpu_count
+
+logger = logging.getLogger(__name__)
 
 
 def build_table(
@@ -51,7 +53,6 @@ def build_table(
         extract=extract,
         workers=workers,
         max_failures=max_failures,
-        log_level=logging.getLogger().level,
     )
 
     results = _run_pool(_worker, workers, worker_id)
@@ -66,10 +67,7 @@ def _build_table_worker(
     extract: Extractor,
     workers: int,
     max_failures: Optional[int],
-    log_level: int,
 ):
-    setup_logging(log_level)
-
     if isinstance(source, str):
         source = iglob(source, recursive=True)
 
@@ -140,7 +138,6 @@ def build_parquet(
         max_failures=max_failures,
         path_column=path_column,
         mtime_column=mtime_column,
-        log_level=logging.getLogger().level,
     )
 
     _run_pool(_worker, workers, worker_id)
@@ -157,10 +154,7 @@ def _build_parquet_worker(
     max_failures: Optional[int],
     path_column: str,
     mtime_column: str,
-    log_level: int,
 ):
-    setup_logging(log_level)
-
     start = datetime.now()
     output = Path(output)
     if isinstance(source, str):
@@ -209,7 +203,7 @@ def _check_workers(workers: Optional[int], worker_id: Optional[int]) -> Tuple[in
 
     if not (worker_id is None or 0 <= worker_id < workers):
         raise ValueError(
-            f"Invalid worker_id {worker_id}; expeced 0 <= worker_id < {workers}"
+            f"Invalid worker_id {worker_id}; expected 0 <= worker_id < {workers}"
         )
     return workers, worker_id
 
@@ -230,7 +224,7 @@ def _run_pool(
                     results.append(result)
                 except Exception as exc:
                     worker_id = futures_to_id[future]
-                    logging.warning(
+                    logger.warning(
                         "Generated exception in worker %d", worker_id, exc_info=exc
                     )
 

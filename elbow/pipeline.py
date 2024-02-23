@@ -11,6 +11,8 @@ from elbow.typing import StrOrPath
 
 __all__ = ["ProcessCounts", "Pipeline"]
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ProcessCounts:
@@ -68,7 +70,7 @@ class Pipeline:
                     counts.success += 1
 
                 except Exception as exc:
-                    logging.warning("Failed to process %s", path, exc_info=exc)
+                    logger.warning("Failed to process %s", path, exc_info=exc)
                     counts.error += 1
                     if (
                         self.max_failures is not None
