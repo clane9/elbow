@@ -11,6 +11,8 @@ from elbow.utils import parse_size
 
 __all__ = ["BufferedParquetWriter"]
 
+logger = logging.getLogger(__name__)
+
 
 class BufferedParquetWriter:
     """
@@ -105,7 +107,7 @@ class BufferedParquetWriter:
         self._push_batch()
 
         if self._future is not None and self._future.running():
-            logging.info("Waiting for previous batch to finish writing")
+            logger.info("Waiting for previous batch to finish writing")
             self._future.result()
 
         if self._table is not None:

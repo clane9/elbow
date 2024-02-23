@@ -1,11 +1,11 @@
 import argparse
+import logging
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
 from elbow.builders import build_parquet
-from elbow.utils import setup_logging
 
 
 def main():
@@ -45,7 +45,7 @@ def main():
     parser.add_argument("-v", "--verbose", help="Verbose logging.", action="store_true")
 
     args = parser.parse_args()
-    setup_logging("INFO" if args.verbose else "ERROR")
+    logging.basicConfig(level="INFO" if args.verbose else "ERROR")
 
     build_parquet(
         source=str(args.root / "**" / "*.jpg"),
