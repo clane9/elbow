@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Union
 import numpy as np
 import pyarrow as pa
 
-from elbow.inference import get_dtype, infer_dtype
+from elbow.inference import DataType, get_dtype, infer_dtype
 from elbow.typing import Dataclass
 
 __all__ = [
@@ -19,7 +19,6 @@ __all__ = [
     "arrow_array",
 ]
 
-DataType = pa.DataType
 RecordLike = Union[Dict[str, Any], Dataclass, "Record"]
 
 
