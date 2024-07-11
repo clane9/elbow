@@ -26,7 +26,6 @@ classifiers = [
 dependencies = [
     "typing_extensions",
     "numpy",
-    "pandas",
     "pyarrow",
     "tqdm",
 ]

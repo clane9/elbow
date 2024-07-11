@@ -7,7 +7,7 @@ from glob import iglob
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
-import pandas as pd
+import pyarrow as pa
 
 from elbow.extractors import Extractor
 from elbow.filters import FileModifiedIndex, hash_partitioner
@@ -27,7 +27,7 @@ def build_table(
     workers: Optional[int] = None,
     worker_id: Optional[int] = None,
     max_failures: Optional[int] = 0,
-) -> pd.DataFrame:
+) -> pa.Table:
     """
     Extract records from a stream of files and load into a pandas DataFrame
 
@@ -56,7 +56,7 @@ def build_table(
     )
 
     results = _run_pool(_worker, workers, worker_id)
-    df = pd.concat(results, axis=0, ignore_index=True)
+    df = pa.concat_tables(results)
     return df
 
 

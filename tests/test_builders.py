@@ -34,7 +34,7 @@ def test_build_table(jsonl_dataset: str, benchmark: BenchmarkFixture):
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     expected_columns = ["file_path", "link_target", "mod_time", "a", "b", "c", "d"]
-    assert df.columns.tolist() == expected_columns
+    assert df.column_names == expected_columns
 
 
 def test_build_table_parallel(jsonl_dataset: str):
@@ -42,7 +42,7 @@ def test_build_table_parallel(jsonl_dataset: str):
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     expected_columns = ["file_path", "link_target", "mod_time", "a", "b", "c", "d"]
-    assert df.columns.tolist() == expected_columns
+    assert df.column_names == expected_columns
 
 
 def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):

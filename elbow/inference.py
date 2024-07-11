@@ -5,8 +5,6 @@ import numpy as np
 import pyarrow as pa
 from typing_extensions import get_args, get_origin
 
-from . import PaJSONType, PaNDArrayType, PaPickleType
-
 __all__ = ["DataType", "Fields", "get_dtype", "infer_dtype"]
 
 DataType = Union[type, str, pa.DataType, np.dtype]
@@ -96,8 +94,8 @@ def _get_generic_dtype(alias: Any) -> Optional[pa.DataType]:
 
     # generic record type Dict[str, ...]
     # assume json
-    if origin is dict and len(args) >= 1 and args[0] is str:
-        return PaJSONType()
+    #if origin is dict and len(args) >= 1 and args[0] is str:
+    #    return PaJSONType()
     return None
 
 
@@ -107,14 +105,14 @@ def _get_extension_dtype(alias: DataType) -> Optional[pa.DataType]:
 
     alias = alias.lower()
 
-    if alias == "json":
-        return PaJSONType()
+    #if alias == "json":
+    #    return PaJSONType()
 
-    if alias == "pickle":
-        return PaPickleType()
+    #if alias == "pickle":
+    #    return PaPickleType()
 
-    if alias.startswith("ndarray"):
-        return _ndarray_from_string(alias)
+    #if alias.startswith("ndarray"):
+    #    return _ndarray_from_string(alias)
     return None
 
 
@@ -184,20 +182,20 @@ def _list_from_string(alias: str) -> Optional[pa.DataType]:
     return pa.list_(dtype)
 
 
-def _ndarray_from_string(alias: str) -> Optional[pa.DataType]:
-    match = re.match(r"^ndarray\s*<(?:\s*item\s*:)?(.+)>$", alias)
-    if match is None:
-        return None
-    alias = match.group(1)
-    dtype = get_dtype(alias)
-    return PaNDArrayType(dtype)
+#def _ndarray_from_string(alias: str) -> Optional[pa.DataType]:
+#    match = re.match(r"^ndarray\s*<(?:\s*item\s*:)?(.+)>$", alias)
+#    if match is None:
+#        return None
+#    alias = match.group(1)
+#    dtype = get_dtype(alias)
+#    return PaNDArrayType(dtype)
 
 
 def infer_dtype(scalar: Any) -> pa.DataType:
     """
     Attempt to infer the data type of an arbitrary scalar value.
     """
-    if isinstance(scalar, np.ndarray) and scalar.ndim > 1:
-        return PaNDArrayType(get_dtype(scalar.dtype))
+    #if isinstance(scalar, np.ndarray) and scalar.ndim > 1:
+    #    return PaNDArrayType(get_dtype(scalar.dtype))
 
     return pa.scalar(scalar).type
