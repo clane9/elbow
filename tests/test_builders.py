@@ -1,7 +1,6 @@
 import time
 from pathlib import Path
 
-import pandas as pd
 import pytest
 from pyarrow import parquet as pq
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -52,7 +51,7 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 1
 
-    df = dset.read().to_pandas()
+    df = dset.read()
     assert df.shape == (NUM_BATCHES * BATCH_SIZE, 7)
 
     with pytest.raises(FileExistsError):
@@ -72,7 +71,7 @@ def test_build_parquet(jsonl_dataset: str, mod_tmp_path: Path):
     dset2 = pq.ParquetDataset(pq_path)
     assert len(dset2.files) == 2
 
-    df2 = dset2.read().to_pandas()
+    df2 = dset2.read()
     assert df2.shape == ((NUM_BATCHES + 2) * BATCH_SIZE, 7)
 
 
@@ -85,7 +84,7 @@ def test_build_parquet_parallel(jsonl_dataset: str, mod_tmp_path: Path):
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
-    df = dset.read().to_pandas()
+    df = dset.read()
     # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
     assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
 
@@ -110,7 +109,7 @@ def test_build_parquet_partial(jsonl_dataset: str, mod_tmp_path: Path):
     dset = pq.ParquetDataset(pq_path)
     assert len(dset.files) == 2
 
-    df = dset.read().to_pandas()
+    df = dset.read()
     # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
     assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
 
@@ -129,7 +128,7 @@ def test_build_parquet_with_crawl(mod_tmp_path: Path):
         output=pq_path,
         workers=2,
     )
-    df = pd.read_parquet(pq_path)
+    df = pq.read_table(pq_path)
     # NOTE: only + 1 rather than + 2 bc the new batch is no longer new
     assert df.shape == ((NUM_BATCHES + 1) * BATCH_SIZE, 7)
 
