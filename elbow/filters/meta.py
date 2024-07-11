@@ -31,7 +31,10 @@ class FileModifiedIndex:
         """
         path_array = df[path_column]
         mtime_array = df[mtime_column]
-        index = {path_array[i].as_py(): mtime_array[i].as_py() for i in range(len(path_array))}
+        index = {
+            path_array[i].as_py(): mtime_array[i].as_py()
+            for i in range(len(path_array))
+        }
         return cls(index)
 
     @classmethod
@@ -46,9 +49,7 @@ class FileModifiedIndex:
         """
         # TODO: maybe try to infer the path/mtime columns more flexibly
         try:
-            df = pq.read_table(
-                path, columns=[path_column, mtime_column]
-            )
+            df = pq.read_table(path, columns=[path_column, mtime_column])
         except ArrowInvalid:
             raise ValueError(
                 "Parquet table is missing file index columns "
