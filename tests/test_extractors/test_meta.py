@@ -15,6 +15,7 @@ def json_path(tmp_path: Path) -> Path:
     return json_path
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlinks not supported on Windows")
 def test_extract_file_meta(json_path: Path):
     metadata = extract_file_meta(json_path)
 

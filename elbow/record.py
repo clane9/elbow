@@ -2,10 +2,9 @@ from dataclasses import fields
 from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 
-from elbow.dtypes import DataType, PaExtensionType, get_dtype, infer_dtype
+from elbow.dtype_inference import DataType, get_dtype, infer_dtype
 from elbow.typing import Dataclass
 
 __all__ = [
@@ -269,11 +268,11 @@ class RecordBatch:
         table = arrow_table(self._batch, schema)
         return table
 
-    def to_df(self) -> pd.DataFrame:
+    def to_df(self) -> pa.Table:
         """
         Convert the batch to a pandas DataFrame.
         """
-        return self.to_arrow().to_pandas()
+        return self.to_arrow()
 
     def clear(self):
         """
@@ -342,11 +341,7 @@ def arrow_record(data: RecordLike, schema: pa.Schema) -> pa.RecordBatch:
 
     row = {}
     for field in schema:
-        name, typ = field.name, field.type
-        value = data.get(name)
-        if isinstance(typ, PaExtensionType):
-            value = typ.pack(value)
-        row[name] = value
+        row[field.name] = data.get(field.name)
     batch = pa.RecordBatch.from_pylist([row], schema=schema)
     return batch
 
@@ -369,14 +364,12 @@ def arrow_table(data: Iterable[RecordLike], schema: pa.Schema):
 
 
 def arrow_array(
-    data: Union[Iterable, np.ndarray, pd.Series],
+    data: Union[Iterable, np.ndarray, pa.Array],
     type: pa.DataType,
 ) -> pa.Array:
     """
     Wrapper around `pa.array()` with support for extension types.
     """
-    if isinstance(type, PaExtensionType):
-        data = [type.pack(v) for v in data]
     return pa.array(data, type=type)
 
 

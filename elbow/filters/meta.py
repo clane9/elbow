@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Dict
 
-import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from pyarrow import ArrowInvalid
 
 from elbow.typing import StrOrPath
@@ -21,17 +22,19 @@ class FileModifiedIndex:
     @classmethod
     def from_df(
         cls,
-        df: pd.DataFrame,
+        df: pa.Table,
         path_column: str = "file_path",
         mtime_column: str = "mod_time",
     ):
         """
-        Initialize index from a dataframe with columns for the file path and modified
-        time.
+        Create a dictionary using the path column as keys and mtime column as values.
         """
-        df = df[[path_column, mtime_column]]
-        df = df.set_index(path_column)
-        index = df[mtime_column].to_dict()
+        path_array = df[path_column]
+        mtime_array = df[mtime_column]
+        index = {
+            path_array[i].as_py(): mtime_array[i].as_py()
+            for i in range(len(path_array))
+        }
         return cls(index)
 
     @classmethod
@@ -46,9 +49,7 @@ class FileModifiedIndex:
         """
         # TODO: maybe try to infer the path/mtime columns more flexibly
         try:
-            df = pd.read_parquet(
-                path, columns=[path_column, mtime_column], engine="pyarrow"
-            )
+            df = pq.read_table(path, columns=[path_column, mtime_column])
         except ArrowInvalid:
             raise ValueError(
                 "Parquet table is missing file index columns "

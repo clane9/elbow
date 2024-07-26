@@ -113,8 +113,8 @@ def test_record_batch():
 
     df = batch.to_df()
     assert df.shape == (3, 4)
-    assert df.columns.tolist() == ["a", "b", "c", "d"]
-    assert df["d"].isna().sum() == 2
+    assert df.column_names == ["a", "b", "c", "d"]
+    assert df["d"].null_count == 2
 
 
 if __name__ == "__main__":
