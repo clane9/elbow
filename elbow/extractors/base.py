@@ -17,5 +17,4 @@ class Extractor(Protocol):
 
     def __call__(
         self, path: StrOrPath
-    ) -> Union[Optional[RecordLike], Iterable[Optional[RecordLike]]]:
-        ...
+    ) -> Union[Optional[RecordLike], Iterable[Optional[RecordLike]]]: ...

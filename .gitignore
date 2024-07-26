@@ -33,3 +33,6 @@ example/images.pqds
 
 # Jupyter
 .ipynb_checkpoints
+
+# Pycharm
+.idea/
