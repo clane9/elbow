@@ -193,7 +193,7 @@ def _build_parquet_worker(
     return counts
 
 
-def _check_workers(workers: Optional[int], worker_id: Optional[int]) -> Tuple[int, int]:
+def _check_workers(workers: Optional[int], worker_id: Optional[int]) -> Tuple[int, Optional[int]]:
     if workers is None:
         workers = 1
     elif workers == -1:
