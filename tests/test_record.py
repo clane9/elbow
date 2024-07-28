@@ -38,7 +38,7 @@ def test_record_to_dict():
     rec = record.Record({"a": 1, "b": 2.3})
     dict_rec = rec.to_dict()
     assert rec == dict_rec
-    assert type(dict_rec) == dict
+    assert isinstance(dict_rec, dict)
 
 
 def test_record_merge():
